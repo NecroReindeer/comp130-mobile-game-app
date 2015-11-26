@@ -21,7 +21,6 @@ class PlayArea(Widget):
                self.create_cell((x, y))
         for cell in self.cells:
             self.add_widget(cell)
-            cell.create_wall()
 
     def create_cell(self, coords):
         """Create a cell at provided grid coordinates"""
@@ -37,27 +36,17 @@ class PlayArea(Widget):
 
 
 class Wall(Widget):
-    color = ObjectProperty((1,1,1))
-    origin = ObjectProperty((0,0))
-    angle = NumericProperty(0)
+    pass
 
 
 class Cell(Widget):
     sides = NumericProperty(4)
     wall_thickness = NumericProperty(0.1)
 
-    def create_wall(self):
-        angle = 0
-        for i in range(self.sides):
-            wall = Wall()
-            wall.height = self.height
-            wall.width = self.width * self.wall_thickness
-            wall.pos = self.pos
-            wall.color = random.uniform(0,1), random.uniform(0,1), random.uniform(0,1)
-            wall.angle = angle
-            wall.origin = self.center
-            self.add_widget(wall)
-            angle += 90
+    left_wall = ObjectProperty(None)
+    right_wall = ObjectProperty(None)
+    top_wall = ObjectProperty(None)
+    bottom_wall = ObjectProperty(None)
 
 
 class PlayerBeetle(Widget):
@@ -72,16 +61,11 @@ class PlayerBeetle(Widget):
 
 
 class HotrodGame(Widget):
-    level = ObjectProperty(None)
     player = ObjectProperty(None)
+    play_area = ObjectProperty(None)
 
     def start(self):
-        play_area = PlayArea()
-        play_area.height = self.height
-        play_area.width = play_area.height
-        play_area.padding = (self.width - self.height) / 2
-        self.add_widget(play_area)
-        play_area.generate_level()
+        self.play_area.generate_level()
 
     def update(self, dt):
         self.player.move()
@@ -109,6 +93,7 @@ class HotrodGame(Widget):
             self.player.velocity_x = 0
             self.player.velocity_y = -5
         self.player.color = (random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1))
+
 
 class HotrodApp(App):
     # game is property so that it can be referred to

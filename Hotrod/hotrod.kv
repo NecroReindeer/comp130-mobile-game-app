@@ -1,16 +1,87 @@
 #:kivy 1.9.0
 
+#:import random random
+
 <HotrodGame>
     player: player_beetle_id
+    play_area: play_area_id
 
     PlayerBeetle:
         id: player_beetle_id
+
+    PlayArea:
+
+        id: play_area_id
+        size: self.parent.height, self.parent.height
+        padding: (self.parent.width - self.parent.height) / 2
 
     Label:
         font_size: 70
         center_x: root.width / 10
         top: root.top
         text: "Oh no"
+
+<Cell>
+    left_wall: left_wall_id
+    right_wall: right_wall_id
+    bottom_wall: bottom_wall_id
+    top_wall: top_wall_id
+
+    Wall:
+        id: left_wall_id
+        canvas:
+            Color:
+                rgb: (random.uniform(0,1), random.uniform(0,1), random.uniform(0,1))
+            PushMatrix
+            Rotate:
+                angle: 0
+                origin: self.parent.center
+            Rectangle:
+                pos: self.pos
+                size: self.size
+            PopMatrix
+
+    Wall:
+        id: bottom_wall_id
+        canvas:
+            Color:
+                rgb: (random.uniform(0,1), random.uniform(0,1), random.uniform(0,1))
+            PushMatrix
+            Rotate:
+                angle: 90
+                origin: self.parent.center
+            Rectangle:
+                pos: self.pos
+                size: self.size
+            PopMatrix
+
+    Wall:
+        id: right_wall_id
+        canvas:
+            Color:
+                rgb: (random.uniform(0,1), random.uniform(0,1), random.uniform(0,1))
+            PushMatrix
+            Rotate:
+                angle: 180
+                origin: self.parent.center
+            Rectangle:
+                pos: self.pos
+                size: self.size
+            PopMatrix
+
+    Wall:
+        id: top_wall_id
+        canvas:
+            Color:
+                rgb: (random.uniform(0,1), random.uniform(0,1), random.uniform(0,1))
+            PushMatrix
+            Rotate:
+                angle: 270
+                origin: self.parent.center
+            Rectangle:
+                pos: self.pos
+                size: self.size
+            PopMatrix
 
 <PlayerBeetle>
     size: 25, 25
@@ -22,15 +93,6 @@
             size: self.size
 
 <Wall>:
-    canvas:
-        Color:
-            rgb: self.color
-        PushMatrix
-        Rotate:
-            angle: self.angle
-            origin: self.origin
-        Rectangle:
-            pos: self.pos
-            size: self.size
-        PopMatrix
-
+    height: self.parent.height
+    width: self.parent.width * self.parent.wall_thickness
+    pos: self.parent.pos
