@@ -3,17 +3,21 @@
 #:import random random
 
 <HotrodGame>
-    player: player_beetle_id
     play_area: play_area_id
 
-    PlayerBeetle:
-        id: player_beetle_id
-
     PlayArea:
+        player: player_beetle_id
 
         id: play_area_id
-        size: self.parent.height, self.parent.height
         padding: (self.parent.width - self.parent.height) / 2
+        cell_size: (self.height/self.rows, self.height/self.rows)
+        size: self.parent.height, self.parent.height
+
+        pos: (self.padding, 0)
+
+        PlayerBeetle:
+            id: player_beetle_id
+            speed: 5
 
     Label:
         font_size: 70
@@ -27,64 +31,26 @@
     bottom_wall: bottom_wall_id
     top_wall: top_wall_id
 
+    interior: (self.width - self.width * self.wall_thickness * 2, self.height - self.height * self.wall_thickness * 2)
+    walls: [self.left_wall, self.right_wall, self.top_wall, self.bottom_wall]
+
     Wall:
         id: left_wall_id
-        canvas:
-            Color:
-                rgb: (random.uniform(0,1), random.uniform(0,1), random.uniform(0,1))
-            PushMatrix
-            Rotate:
-                angle: 0
-                origin: self.parent.center
-            Rectangle:
-                pos: self.pos
-                size: self.size
-            PopMatrix
+        angle: 0
 
     Wall:
         id: bottom_wall_id
-        canvas:
-            Color:
-                rgb: (random.uniform(0,1), random.uniform(0,1), random.uniform(0,1))
-            PushMatrix
-            Rotate:
-                angle: 90
-                origin: self.parent.center
-            Rectangle:
-                pos: self.pos
-                size: self.size
-            PopMatrix
+        angle: 90
 
     Wall:
         id: right_wall_id
-        canvas:
-            Color:
-                rgb: (random.uniform(0,1), random.uniform(0,1), random.uniform(0,1))
-            PushMatrix
-            Rotate:
-                angle: 180
-                origin: self.parent.center
-            Rectangle:
-                pos: self.pos
-                size: self.size
-            PopMatrix
+        angle: 180
 
     Wall:
         id: top_wall_id
-        canvas:
-            Color:
-                rgb: (random.uniform(0,1), random.uniform(0,1), random.uniform(0,1))
-            PushMatrix
-            Rotate:
-                angle: 270
-                origin: self.parent.center
-            Rectangle:
-                pos: self.pos
-                size: self.size
-            PopMatrix
+        angle: 270
 
 <PlayerBeetle>
-    size: 25, 25
     canvas:
         Color:
             rgb: self.color
@@ -96,3 +62,14 @@
     height: self.parent.height
     width: self.parent.width * self.parent.wall_thickness
     pos: self.parent.pos
+    canvas:
+        Color:
+            rgb: (random.uniform(0,1), random.uniform(0,1), random.uniform(0,1))
+        PushMatrix
+        Rotate:
+            angle: self.angle
+            origin: self.parent.center
+        Rectangle:
+            pos: self.pos
+            size: self.size
+        PopMatrix

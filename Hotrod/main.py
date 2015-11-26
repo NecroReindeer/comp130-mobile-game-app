@@ -1,98 +1,116 @@
 __author__ = 'Harriet'
 
+import random
+
 from kivy.app import App
 from kivy.uix.widget import Widget
-from kivy.properties import ObjectProperty, NumericProperty, ReferenceListProperty, ListProperty
+from kivy.properties import ObjectProperty, NumericProperty, ReferenceListProperty, ListProperty, BooleanProperty
 from kivy.vector import Vector
 from kivy.clock import Clock
 from kivy.config import Config
 
-import random
+import direction
 
 class PlayArea(Widget):
+    player = ObjectProperty(None)
+
     columns = NumericProperty(10)
     rows = NumericProperty(10)
-    cells = ListProperty([])
+
+    cells = ListProperty()
+    cell_size = ObjectProperty()
+
     padding = NumericProperty()
 
     def generate_level(self):
+
         for x in range(self.columns):
             for y in range(self.rows):
                self.create_cell((x, y))
         for cell in self.cells:
             self.add_widget(cell)
+        self.player.size = self.cells[0].interior
+        self.player.center = self.cells[0].center
 
     def create_cell(self, coords):
-        """Create a cell at provided grid coordinates"""
+        """Create a Cell at provided grid coordinates"""
         cell = Cell()
-        cell.height = self.height/self.rows
-        cell.width = cell.height
+        cell.size = self.cell_size
         cell.pos = self.get_cell_coords(coords, cell.size)
         self.cells.append(cell)
 
     def get_cell_coords(self, (x, y), (width, height)):
-        """Convert grid coordinates to pixel coordinates"""
+        """Convert grid coordinates to window coordinates"""
         return ((width * x + self.padding, height * y))
+
+    def update(self):
+        self.player.move()
+        #
+        # for cell in self.cells:
+        #     for wall in cell.walls:
+        #         if wall.collide_widget(self.player):
+        #             self.player.velocity = 0, 0
+
+        if (self.player.y <= 0 or self.player.top >= self.top):
+            self.player.velocity_y = 0
+        if (self.player.x <= self.x or self.player.right >= self.right):
+            self.player.velocity_x = 0
+
+    def on_touch_up(self, touch):
+        # Move right if player swipes right
+        if touch.pos[0] > touch.opos[0] + self.width/10:
+            self.player.move_direction = direction.Direction.right
+        # Move left if player swipes left
+        if touch.pos[0] < touch.opos[0] - self.width/10:
+            self.player.move_direction = direction.Direction.left
+        # Move up is player swipes up
+        if touch.pos[1] > touch.opos[1] + self.height/10:
+            self.player.move_direction = direction.Direction.up
+        # Move down if player swipes down
+        if touch.pos[1] < touch.opos[1] - self.height/10:
+            self.player.move_direction = direction.Direction.down
+        self.player.color = (random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1))
 
 
 class Wall(Widget):
-    pass
+    angle = NumericProperty(0)
 
 
 class Cell(Widget):
     sides = NumericProperty(4)
     wall_thickness = NumericProperty(0.1)
+    interior = ListProperty()
 
     left_wall = ObjectProperty(None)
     right_wall = ObjectProperty(None)
     top_wall = ObjectProperty(None)
     bottom_wall = ObjectProperty(None)
 
+    walls = ListProperty()
+
 
 class PlayerBeetle(Widget):
-    velocity_x = NumericProperty(0)
-    velocity_y = NumericProperty(0)
-    velocity = ReferenceListProperty(velocity_x, velocity_y)
-
+    speed = NumericProperty()
     color = ObjectProperty((1, 1, 1))
 
+    move_direction = ObjectProperty(direction.Direction.right)
+
+    can_move = BooleanProperty(True)
+
     def move(self):
-        self.pos = Vector(*self.velocity) + self.pos
+        self.pos = Vector(self.move_direction.value[0] * self.speed,
+                          self.move_direction.value[1] * self.speed) + self.pos
 
 
 class HotrodGame(Widget):
-    player = ObjectProperty(None)
     play_area = ObjectProperty(None)
+
 
     def start(self):
         self.play_area.generate_level()
 
     def update(self, dt):
-        self.player.move()
-
-        if (self.player.y <= 0 or self.player.top >= self.top):
-            self.player.velocity_y = 0
-        if (self.player.x <= self.x or self.player.right >= self.width):
-            self.player.velocity_x = 0
-
-    def on_touch_up(self, touch):
-        # Move right if player swipes right
-        if touch.pos[0] > touch.opos[0] + self.width/10:
-            self.player.velocity_x = 5
-            self.player.velocity_y = 0
-        # Move left if player swipes left
-        if touch.pos[0] < touch.opos[0] - self.width/10:
-            self.player.velocity_x = -5
-            self.player.velocity_y = 0
-        # Move up is player swipes up
-        if touch.pos[1] > touch.opos[1] + self.height/10:
-            self.player.velocity_x = 0
-            self.player.velocity_y = 5
-        # Move down if player swipes down
-        if touch.pos[1] < touch.opos[1] - self.height/10:
-            self.player.velocity_x = 0
-            self.player.velocity_y = -5
-        self.player.color = (random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1))
+        self.play_area.update()
 
 
 class HotrodApp(App):
