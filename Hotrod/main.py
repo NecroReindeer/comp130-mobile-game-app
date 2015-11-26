@@ -9,6 +9,32 @@ from kivy.config import Config
 
 import random
 
+class PlayArea(Widget):
+    columns = NumericProperty(10)
+    rows = NumericProperty(10)
+    cells = ListProperty([])
+    padding = NumericProperty()
+
+    def generate_level(self):
+        for x in range(self.columns):
+            for y in range(self.rows):
+               self.create_cell((x, y))
+        for cell in self.cells:
+            self.add_widget(cell)
+            cell.create_wall()
+
+    def create_cell(self, coords):
+        """Create a cell at provided grid coordinates"""
+        cell = Cell()
+        cell.height = self.height/self.rows
+        cell.width = cell.height
+        cell.pos = self.get_cell_coords(coords, cell.size)
+        self.cells.append(cell)
+
+    def get_cell_coords(self, (x, y), (width, height)):
+        """Convert grid coordinates to pixel coordinates"""
+        return ((width * x + self.padding, height * y))
+
 
 class Wall(Widget):
     color = ObjectProperty((1,1,1))
@@ -49,18 +75,13 @@ class HotrodGame(Widget):
     level = ObjectProperty(None)
     player = ObjectProperty(None)
 
-    cells = ListProperty([])
-    columns = NumericProperty(10)
-    rows = NumericProperty(10)
-
     def start(self):
-        for x in range(self.columns):
-            for y in range(self.rows):
-               self.create_cell((x, y))
-        for cell in self.cells:
-            self.add_widget(cell)
-            cell.create_wall()
-
+        play_area = PlayArea()
+        play_area.height = self.height
+        play_area.width = play_area.height
+        play_area.padding = (self.width - self.height) / 2
+        self.add_widget(play_area)
+        play_area.generate_level()
 
     def update(self, dt):
         self.player.move()
@@ -88,19 +109,6 @@ class HotrodGame(Widget):
             self.player.velocity_x = 0
             self.player.velocity_y = -5
         self.player.color = (random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1))
-
-    def create_cell(self, coords):
-        """Create a cell at provided grid coordinates"""
-        cell = Cell()
-        cell.height = self.height/self.rows
-        cell.width = cell.height
-        cell.pos = self.get_cell_coords(coords, cell.size)
-        self.cells.append(cell)
-
-    def get_cell_coords(self, (x, y), (width, height)):
-        """Convert grid coordinates to pixel coordinates"""
-        return ((width * x, height * y))
-
 
 class HotrodApp(App):
     # game is property so that it can be referred to
