@@ -2,21 +2,65 @@ __author__ = 'Harriet'
 
 from kivy.app import App
 from kivy.uix.widget import Widget
-from kivy.properties import ObjectProperty, NumericProperty, ReferenceListProperty
+from kivy.properties import ObjectProperty, NumericProperty, ReferenceListProperty, ListProperty
 from kivy.vector import Vector
 from kivy.clock import Clock
-from kivy.uix.floatlayout import  FloatLayout
+from kivy.config import Config
+
+import random
+
+
+class Wall(Widget):
+    color = ObjectProperty((1,1,1))
+    origin = ObjectProperty((0,0))
+    angle = NumericProperty(0)
+
+
+class Cell(Widget):
+    sides = NumericProperty(4)
+    wall_thickness = NumericProperty(0.1)
+
+    def create_wall(self):
+        angle = 0
+        for i in range(self.sides):
+            wall = Wall()
+            wall.height = self.height
+            wall.width = self.width * self.wall_thickness
+            wall.pos = self.pos
+            wall.color = random.uniform(0,1), random.uniform(0,1), random.uniform(0,1)
+            wall.angle = angle
+            wall.origin = self.center
+            self.add_widget(wall)
+            angle += 90
+
 
 class PlayerBeetle(Widget):
     velocity_x = NumericProperty(0)
     velocity_y = NumericProperty(0)
     velocity = ReferenceListProperty(velocity_x, velocity_y)
 
+    color = ObjectProperty((1, 1, 1))
+
     def move(self):
         self.pos = Vector(*self.velocity) + self.pos
 
+
 class HotrodGame(Widget):
+    level = ObjectProperty(None)
     player = ObjectProperty(None)
+
+    cells = ListProperty([])
+    columns = NumericProperty(10)
+    rows = NumericProperty(10)
+
+    def start(self):
+        for x in range(self.columns):
+            for y in range(self.rows):
+               self.create_cell((x, y))
+        for cell in self.cells:
+            self.add_widget(cell)
+            cell.create_wall()
+
 
     def update(self, dt):
         self.player.move()
@@ -43,13 +87,36 @@ class HotrodGame(Widget):
         if touch.pos[1] < touch.opos[1] - self.height/10:
             self.player.velocity_x = 0
             self.player.velocity_y = -5
+        self.player.color = (random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1))
+
+    def create_cell(self, coords):
+        """Create a cell at provided grid coordinates"""
+        cell = Cell()
+        cell.height = self.height/self.rows
+        cell.width = cell.height
+        cell.pos = self.get_cell_coords(coords, cell.size)
+        self.cells.append(cell)
+
+    def get_cell_coords(self, (x, y), (width, height)):
+        """Convert grid coordinates to pixel coordinates"""
+        return ((width * x, height * y))
 
 
 class HotrodApp(App):
+    # game is property so that it can be referred to
+    # outside of build()
+    game = ObjectProperty(None)
+
     def build(self):
-        game = HotrodGame()
-        Clock.schedule_interval(game.update, 1.0/60.0)
-        return game
+        Config.set('graphics', 'fullscreen', 'auto')
+        self.game = HotrodGame()
+        Clock.schedule_interval(self.game.update, 1.0/60.0)
+        return self.game
+
+    def on_start(self):
+        # Called here rather than in build() so that
+        # size is correct
+        self.game.start()
 
 
 if __name__ == '__main__':
