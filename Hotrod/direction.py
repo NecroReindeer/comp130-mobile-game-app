@@ -18,3 +18,13 @@ class Direction(Enum):
             return 180
         elif self == Direction.up:
             return 270
+
+    def get_opposite(self):
+        if self == Direction.left:
+            return Direction.right
+        elif self == Direction.down:
+            return Direction.up
+        elif self == Direction.right:
+            return Direction.left
+        elif self == Direction.up:
+            return Direction.down

@@ -10,6 +10,8 @@
     PlayArea:
         player: player_beetle_id
 
+        cells: [[None for i in range(self.columns)] for i in range(self.rows)]
+
         id: play_area_id
         padding: (self.parent.width - self.parent.height) / 2
         cell_size: (self.height/self.rows, self.height/self.rows)
@@ -36,7 +38,6 @@
     interior: (self.width - self.width * self.wall_thickness * 2, self.height - self.height * self.wall_thickness * 2)
     edges: [self.left_edge, self.bottom_edge, self.right_edge, self.top_edge]
 
-
     CellEdge:
         id: left_edge_id
         direction: direction.Direction.left
@@ -52,6 +53,7 @@
     CellEdge:
         id: top_edge_id
         direction: direction.Direction.up
+
 
 <PlayerBeetle>
     canvas:

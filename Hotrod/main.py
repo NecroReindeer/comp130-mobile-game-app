@@ -23,29 +23,77 @@ class PlayArea(Widget):
 
     padding = NumericProperty()
 
-    def generate_level(self):
-        self.cells = [["bah" for i in range(self.columns)] for i in range(self.rows)]
-        for x in range(self.columns):
-            for y in range(self.rows):
-                coordinates = x, y
-                self.create_cell(coordinates)
-        for column in self.cells:
-            for cell in column:
-                cell.set_edges()
-                # Add widget at index 1 so that PlayerBeetle remains at 0
-                self.add_widget(cell, 1)
+    # def generate_level(self):
+    #     self.cells = [[None for i in range(self.columns)] for i in range(self.rows)]
+    #     for x in range(self.columns):
+    #         for y in range(self.rows):
+    #             coordinates = x, y
+    #             self.create_cell(coordinates)
+    #     for column in self.cells:
+    #         for cell in column:
+    #             cell.set_edges()
+    #             # Add widget at index 1 so that PlayerBeetle remains at 0
+    #             self.add_widget(cell, 1)
+    #
+    #     self.player.size = self.cells[0][0].interior
+    #     self.player.center = self.cells[0][0].center
 
+    def generate_level(self):
+        active_cells = []
+        self.set_first_cell(active_cells)
+        while len(active_cells) > 0:
+            self.generate_cells(active_cells)
+        self.add_cells_to_playarea()
+        print self.cells
         self.player.size = self.cells[0][0].interior
         self.player.center = self.cells[0][0].center
+
+    def add_cells_to_playarea(self):
+        for column in self.cells:
+             for cell in column:
+                 # Add widget at index 1 so that PlayerBeetle remains at 0
+                 if isinstance(cell, Cell):
+                     cell.set_edges()
+                     self.add_widget(cell, 1)
+
+    def set_first_cell(self, active_cells):
+        active_cells.append(self.create_cell(self.get_random_coordinates()))
+
+    def generate_cells(self, active_cells):
+        current_index = len(active_cells) - 1
+        current_cell = active_cells[current_index]
+
+        if current_cell.is_initialised():
+            del active_cells[current_index]
+            return
+
+        direction = current_cell.get_random_uninitialised_direction()
+        coordinates = Vector(*current_cell.coordinates) + Vector(*direction.value)
+
+        if self.contains_coordinates(coordinates):
+            next_cell = self.get_cell(coordinates)
+            if next_cell == None:
+                next_cell = self.create_cell(coordinates)
+                current_cell.get_edge(direction).type = CellEdgeType.passage
+                next_cell.get_edge(direction.get_opposite()).type = CellEdgeType.passage
+                active_cells.append(next_cell)
+            else:
+                current_cell.get_edge(direction).type = CellEdgeType.wall
+                next_cell.get_edge(direction.get_opposite()).type = CellEdgeType.wall
+        else:
+            current_cell.get_edge(direction).type = CellEdgeType.wall
+
 
     def create_cell(self, (x, y)):
         """Create a Cell at provided grid coordinates"""
         cell = Cell()
         cell.size = self.cell_size
-        cell.pos = self.get_cell_coords((x, y), cell.size)
+        cell.pos = self.get_cell_position((x, y), cell.size)
+        cell.coordinates = x, y
         self.cells[x][y] = cell
+        return cell
 
-    def get_cell_coords(self, (x, y), (width, height)):
+    def get_cell_position(self, (x, y), (width, height)):
         """Convert grid coordinates to window coordinates"""
         return ((width * x + self.padding, height * y))
 
@@ -76,6 +124,19 @@ class PlayArea(Widget):
             self.player.move_direction = direction.Direction.down
         self.player.color = (random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1))
 
+    def get_random_direction(self):
+        return random.choice(list(direction.Direction))
+
+    def get_random_coordinates(self):
+        return (random.randrange(0, self.columns), random.randrange(0, self.rows))
+
+    def get_cell(self, (x, y)):
+        return self.cells[x][y]
+
+    def contains_coordinates(self, (x, y)):
+        if 0 <= x < self.columns and 0 <= y < self.rows:
+            return True
+
 
 class Wall(Widget):
     angle = NumericProperty(0)
@@ -87,8 +148,12 @@ class CellEdgeType(Enum):
 
 
 class CellEdge(Widget):
-    type = ObjectProperty(CellEdgeType.wall)
-    direction = ObjectProperty(direction.Direction.right)
+    type = ObjectProperty(None)
+    direction = ObjectProperty(None)
+
+    cell = ObjectProperty()
+    bordering_cell = ObjectProperty()
+
 
     def set_edge(self):
         """Check if the edge should be a wall or a passage and add
@@ -104,10 +169,12 @@ class CellEdge(Widget):
         elif self.type == CellEdgeType.passage:
             pass
 
-    def get_edge(self):
-        return self.type
 
 class Cell(Widget):
+    coordinates_x = NumericProperty(0)
+    coordinates_y = NumericProperty(0)
+    coordinates = ReferenceListProperty(coordinates_x, coordinates_y)
+
     sides = NumericProperty(4)
     wall_thickness = NumericProperty(0.1)
     interior = ListProperty()
@@ -118,8 +185,10 @@ class Cell(Widget):
     bottom_edge = ObjectProperty(None)
 
     edges = ListProperty()
+    initialised_edges = NumericProperty(0)
 
     def set_edges(self):
+        """Set the edges to the appropriate type"""
         for edge in self.edges:
             edge.set_edge()
 
@@ -127,6 +196,22 @@ class Cell(Widget):
         for edge in self.edges:
             if edge.direction == direction:
                 return edge
+
+
+    def is_initialised(self):
+        for edge in self.edges:
+            if edge.type == None:
+                return False
+        return True
+
+    def get_random_uninitialised_direction(self):
+        edges = self.edges[:]
+        for i in range(self.sides):
+            random_edge = random.choice(edges)
+            if random_edge.type == None:
+                return random_edge.direction
+            else:
+                edges.remove(random_edge)
 
 
 class PlayerBeetle(Widget):
