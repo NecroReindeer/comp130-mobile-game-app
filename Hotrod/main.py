@@ -123,6 +123,11 @@ class Cell(Widget):
         for edge in self.edges:
             edge.set_edge()
 
+    def get_edge(self, direction):
+        for edge in self.edges:
+            if edge.direction == direction:
+                return edge
+
 
 class PlayerBeetle(Widget):
     # set starting position to 0, 0
@@ -137,11 +142,23 @@ class PlayerBeetle(Widget):
 
     can_move = BooleanProperty(False)
 
+    def check_destination(self):
+        if self.parent.cells[self.x_position][self.y_position].get_edge(self.move_direction).type == CellEdgeType.wall:
+            self.can_move = False
+
     def move(self):
-        print self.position
+        self.update_position()
+        self.check_destination()
         if self.can_move:
             self.pos = Vector(self.move_direction.value[0] * self.speed,
                               self.move_direction.value[1] * self.speed) + self.pos
+
+    def update_position(self):
+        target_position_x = self.position[0] + self.move_direction.value[0]
+        target_position_y = self.position[1] + self.move_direction.value[1]
+        if (self.collide_widget(self.parent.cells[target_position_x][target_position_y]) and
+                not self.collide_widget(self.parent.cells[self.x_position][self.y_position])):
+            self.position = target_position_x, target_position_y
 
 
 
