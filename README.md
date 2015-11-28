@@ -5,3 +5,6 @@ Creativity Cards: Hotrod and Beetle
 Game: Pac-man
 
 [Trello Board](https://trello.com/b/HY4IBdXG/kivy-mobile-game)
+
+
+Code needs a lot of tidying up!
