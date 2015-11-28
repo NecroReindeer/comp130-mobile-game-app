@@ -24,24 +24,26 @@ class PlayArea(Widget):
     padding = NumericProperty()
 
     def generate_level(self):
-
+        self.cells = [["bah" for i in range(self.columns)] for i in range(self.rows)]
         for x in range(self.columns):
             for y in range(self.rows):
-               self.create_cell((x, y))
-        for cell in self.cells:
-            cell.set_edges()
-            # Add widget at index 1 so that PlayerBeetle remains at 0
-            self.add_widget(cell, 1)
+                coordinates = x, y
+                self.create_cell(coordinates)
+        for column in self.cells:
+            for cell in column:
+                cell.set_edges()
+                # Add widget at index 1 so that PlayerBeetle remains at 0
+                self.add_widget(cell, 1)
 
-        self.player.size = self.cells[0].interior
-        self.player.center = self.cells[0].center
+        self.player.size = self.cells[0][0].interior
+        self.player.center = self.cells[0][0].center
 
-    def create_cell(self, coords):
+    def create_cell(self, (x, y)):
         """Create a Cell at provided grid coordinates"""
         cell = Cell()
         cell.size = self.cell_size
-        cell.pos = self.get_cell_coords(coords, cell.size)
-        self.cells.append(cell)
+        cell.pos = self.get_cell_coords((x, y), cell.size)
+        self.cells[x][y] = cell
 
     def get_cell_coords(self, (x, y), (width, height)):
         """Convert grid coordinates to window coordinates"""
@@ -89,7 +91,9 @@ class CellEdge(Widget):
     direction = ObjectProperty(direction.Direction.right)
 
     def set_edge(self):
-        """Check if the edge should be a wall or a passage"""
+        """Check if the edge should be a wall or a passage and add
+        appropriate widget
+        """
         if self.type == CellEdgeType.wall:
             wall = Wall()
             wall.size = self.size
@@ -121,6 +125,11 @@ class Cell(Widget):
 
 
 class PlayerBeetle(Widget):
+    # set starting position to 0, 0
+    x_position = NumericProperty(0)
+    y_position = NumericProperty(0)
+    position = ReferenceListProperty(x_position, y_position)
+
     speed = NumericProperty(5)
     color = ObjectProperty((1, 0, 1))
 
@@ -129,9 +138,11 @@ class PlayerBeetle(Widget):
     can_move = BooleanProperty(False)
 
     def move(self):
+        print self.position
         if self.can_move:
             self.pos = Vector(self.move_direction.value[0] * self.speed,
                               self.move_direction.value[1] * self.speed) + self.pos
+
 
 
 class HotrodGame(Widget):
