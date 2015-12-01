@@ -6,28 +6,38 @@
 
 <HotrodGame>
     play_area: play_area_id
+    player: player_beetle_id
 
     PlayArea:
+        level: level_id
         player: player_beetle_id
-
-        cells: [[None for i in range(self.columns)] for i in range(self.rows)]
 
         id: play_area_id
         padding: (self.parent.width - self.parent.height) / 2
-        cell_size: (self.height/self.rows, self.height/self.rows)
-        size: self.parent.height, self.parent.height
 
+        size: self.parent.height, self.parent.height
         pos: (self.padding, 0)
 
         PlayerBeetle:
             id: player_beetle_id
 
+        Level:
+            id: level_id
+            size: self.parent.height, self.parent.width
+            pos: (self.padding, 0)
+
+            padding: self.parent.padding
+
+            cell_size: (self.height/self.rows, self.height/self.rows)
+            # Initialise 2-dimensional list of correct size
+            cells: [[None for i in range(self.columns)] for i in range(self.rows)]
 
     Label:
         font_size: 70
         center_x: root.width / 10
         top: root.top
         text: "Oh no"
+
 
 <Cell>
     left_edge: left_edge_id
