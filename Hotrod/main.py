@@ -46,7 +46,6 @@ class Level(Widget):
         http://weblog.jamisbuck.org/2011/1/27/maze-generation-growing-tree-algorithm
         """
         # List of active cells used in generation algorithm
-        random.seed("poo")
         active_cells = []
         first_cell_coordinates = self.__get_random_coordinates()
         # Pick the first cell to begin generation from randomly
