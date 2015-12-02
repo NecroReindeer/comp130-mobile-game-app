@@ -31,9 +31,7 @@ class PlayArea(Widget):
 
 
 class Level(Widget):
-    """Generate a maze level using the Growing Tree Algorithm
-    http://weblog.jamisbuck.org/2011/1/27/maze-generation-growing-tree-algorithm
-    """
+    """Widget for the level"""
     padding = NumericProperty()
 
     columns = NumericProperty(10)
@@ -44,16 +42,20 @@ class Level(Widget):
     cell_size = ObjectProperty()
 
     def generate_level(self):
+        """Generate a maze level using the Growing Tree Algorithm
+        http://weblog.jamisbuck.org/2011/1/27/maze-generation-growing-tree-algorithm
+        """
         # List of active cells used in generation algorithm
+        random.seed("poo")
         active_cells = []
-        first_cell_coordinates = self.get_random_coordinates()
+        first_cell_coordinates = self.__get_random_coordinates()
         # Pick the first cell to begin generation from randomly
-        active_cells.append(self.create_cell(first_cell_coordinates))
+        active_cells.append(self.__create_cell(first_cell_coordinates))
         while len(active_cells) > 0:
-            self.generate_cells(active_cells)
-        self.add_cells()
+            self.__generate_cells(active_cells)
+        self.__add_cells()
 
-    def generate_cells(self, active_cells):
+    def __generate_cells(self, active_cells):
         # Determines which index the algorithm generates from.
         # Changing this yields different results
         current_index = len(active_cells) - 1
@@ -71,7 +73,7 @@ class Level(Widget):
             next_cell = self.get_cell(next_cell_coords)
             # Create a new cell and set the edges to passage if no cell exists at next_cell_coords
             if next_cell == None:
-                next_cell = self.create_cell(next_cell_coords)
+                next_cell = self.__create_cell(next_cell_coords)
                 current_cell.get_edge(direction).type = level_cell.CellEdgeType.passage
                 next_cell.get_edge(direction.get_opposite()).type = level_cell.CellEdgeType.passage
                 active_cells.append(next_cell)
@@ -83,7 +85,7 @@ class Level(Widget):
         else:
             current_cell.get_edge(direction).type = level_cell.CellEdgeType.wall
 
-    def create_cell(self, (x, y)):
+    def __create_cell(self, (x, y)):
         """Create a Cell at provided grid coordinates"""
         cell = level_cell.Cell()
         cell.size = self.cell_size
@@ -92,7 +94,7 @@ class Level(Widget):
         self.cells[x][y] = cell
         return cell
 
-    def add_cells(self):
+    def __add_cells(self):
         for column in self.cells:
              for cell in column:
                  if isinstance(cell, level_cell.Cell):
@@ -105,15 +107,15 @@ class Level(Widget):
 
         Arguments:
         (x, y) -- grid coordinate tuple
-        (width, height) -- window size tuple
+        (width, height) -- cell size tuple
         """
         return ((width * x + self.padding, height * y))
 
-    def get_random_direction(self):
+    def __get_random_direction(self):
         """Return a random direction.Direction"""
         return random.choice(list(direction.Direction))
 
-    def get_random_coordinates(self):
+    def __get_random_coordinates(self):
         """Return a random grid coordinate tuple"""
         return (random.randrange(0, self.columns), random.randrange(0, self.rows))
 
@@ -135,38 +137,91 @@ class Level(Widget):
 
 
 class PlayerBeetle(Widget):
-    # set starting position to 0, 0
+    # set starting grid position to 0, 0
     x_position = NumericProperty(0)
     y_position = NumericProperty(0)
-    position = ReferenceListProperty(x_position, y_position)
+    grid_position = ReferenceListProperty(x_position, y_position)
 
     speed = NumericProperty(5)
     color = ObjectProperty((1, 0, 1))
 
-    move_direction = ObjectProperty(direction.Direction.right)
+    current_direction = ObjectProperty(direction.Direction.right)
+    next_direction = ObjectProperty(direction.Direction.right)
 
-    can_move = BooleanProperty(False)
-
-    def check_destination(self):
+    def check_position(self):
+        """Move the player to the center of the current cell if it
+        tries to move through a wall
+        """
         current_cell = self.parent.level.cells[self.x_position][self.y_position]
-        if current_cell.get_edge(self.move_direction).type == level_cell.CellEdgeType.wall:
-            self.can_move = False
+        current_edge = current_cell.get_edge(self.current_direction)
+        if current_edge.type == level_cell.CellEdgeType.wall:
+            if self.current_direction == direction.Direction.right:
+                if self.center_x > current_cell.center_x:
+                    self.center_x = current_cell.center_x
 
-    def move(self):
-        self.check_destination()
-        self.update_position()
-        if self.can_move:
-            self.pos = Vector(self.move_direction.value[0] * self.speed,
-                              self.move_direction.value[1] * self.speed) + self.pos
+            elif self.current_direction == direction.Direction.left:
+                if self.center_x < current_cell.center_x:
+                    self.center_x = current_cell.center_x
+
+            elif self.current_direction == direction.Direction.up:
+                if self.center_y > current_cell.center_y:
+                    self.center_y = current_cell.center_y
+
+            elif self.current_direction == direction.Direction.down:
+                if self.center_y < current_cell.center_y:
+                    self.center_y = current_cell.center_y
+
+    def update_direction(self, (previous_x, previous_y)):
+        """Check if there is a pending movement direction and execute it
+        if possible
+        """
+        if self.next_direction != self.current_direction:
+            current_cell = self.parent.level.cells[self.x_position][self.y_position]
+            current_edge = current_cell.get_edge(self.next_direction)
+
+            if current_edge.type == level_cell.CellEdgeType.passage:
+                if self.current_direction == direction.Direction.right:
+                    # Set new direction for next frame if player has moved into/past center or is at the center of cell
+                    if ((self.center_x >= current_cell.center_x and current_cell.center_x > previous_x)or
+                            (self.center_x == current_cell.center_x and previous_x == current_cell.center_x)):
+                        self.center_x = current_cell.center_x
+                        self.set_direction()
+
+                elif self.current_direction == direction.Direction.left:
+                    if ((self.center_x <= current_cell.center_x and current_cell.center_x < previous_x) or
+                            (self.center_x == current_cell.center_x and previous_x == current_cell.center_x)):
+                        self.center_x = current_cell.center_x
+                        self.set_direction()
+
+                elif self.current_direction == direction.Direction.up:
+                    if ((self.center_y >= current_cell.center_y and current_cell.center_y > previous_y) or
+                            (self.center_y == current_cell.center_y and previous_y == current_cell.center_y)):
+                        self.center_y = current_cell.center_y
+                        self.set_direction()
+
+                elif self.current_direction == direction.Direction.down:
+                    if ((self.center_y <= current_cell.center_y and current_cell.center_y < previous_y) or
+                            (self.center_y == current_cell.center_y and previous_y == current_cell.center_y)):
+                        self.center_y = current_cell.center_y
+                        self.set_direction()
+
+    def set_direction(self):
+        self.current_direction = self.next_direction
 
     def update_position(self):
         """Updates the stored position of the player in grid coordinates"""
-        target_position_x = self.position[0] + self.move_direction.value[0]
-        target_position_y = self.position[1] + self.move_direction.value[1]
-        target_cell = self.parent.level.cells[target_position_x][target_position_y]
-        if (self.collide_widget(target_cell) and
-                not self.collide_widget(self.parent.level.cells[self.x_position][self.y_position])):
-            self.position = target_position_x, target_position_y
+        grid_x = int((self.center_x - self.parent.level.padding) / self.parent.level.cell_size[0])
+        grid_y = int(self.center_y / self.parent.level.cell_size[1])
+        self.grid_position = grid_x, grid_y
+
+    def move(self):
+        # Copy of previous window position
+        previous_pos = self.center[:]
+        self.pos = Vector(self.current_direction.value[0] * self.speed,
+                          self.current_direction.value[1] * self.speed) + self.pos
+        self.check_position()
+        self.update_direction((previous_pos))
+        self.update_position()
 
 
 class HotrodGame(Widget):
@@ -183,20 +238,16 @@ class HotrodGame(Widget):
     def on_touch_up(self, touch):
         # Move right if player swipes right
         if touch.pos[0] > touch.opos[0] + self.width/10:
-            self.player.can_move = True
-            self.player.move_direction = direction.Direction.right
+            self.player.next_direction = direction.Direction.right
         # Move left if player swipes left
         if touch.pos[0] < touch.opos[0] - self.width/10:
-            self.player.can_move = True
-            self.player.move_direction = direction.Direction.left
+            self.player.next_direction = direction.Direction.left
         # Move up is player swipes up
         if touch.pos[1] > touch.opos[1] + self.height/10:
-            self.player.can_move = True
-            self.player.move_direction = direction.Direction.up
+            self.player.next_direction = direction.Direction.up
         # Move down if player swipes down
         if touch.pos[1] < touch.opos[1] - self.height/10:
-            self.player.can_move = True
-            self.player.move_direction = direction.Direction.down
+            self.player.next_direction = direction.Direction.down
         self.player.color = (random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1))
 
 
