@@ -67,6 +67,13 @@ class Cell(Widget):
             else:
                 edges.remove(random_edge)
 
+    def get_walls(self):
+        walls = []
+        for edge in self.edges:
+            if edge.type == CellEdgeType.wall:
+                walls.append(edge)
+        return walls
+
 
 class CellEdge(Widget):
     type = ObjectProperty(None)

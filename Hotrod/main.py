@@ -52,6 +52,7 @@ class Level(Widget):
         active_cells.append(self.__create_cell(first_cell_coordinates))
         while len(active_cells) > 0:
             self.__generate_cells(active_cells)
+        self.__remove_dead_ends()
         self.__add_cells()
 
     def __generate_cells(self, active_cells):
@@ -84,6 +85,48 @@ class Level(Widget):
         else:
             current_cell.get_edge(direction).type = level_cell.CellEdgeType.wall
 
+    def __remove_dead_ends(self):
+        """Ensure that there are no one-cell dead ends"""
+        for column in self.cells:
+            for cell in column:
+                walls = cell.get_walls()
+                if len(walls) >= 3:
+                    target_edge = random.choice(walls)
+                    if cell.coordinates_x == 0 and target_edge.direction == direction.Direction.left:
+                        walls.remove(target_edge)
+                        target_edge = random.choice(walls)
+                    elif cell.coordinates_x == len(self.cells)-1 and target_edge.direction == direction.Direction.right:
+                        walls.remove(target_edge)
+                        target_edge = random.choice(walls)
+
+                    if cell.coordinates_y == 0 and target_edge.direction == direction.Direction.down:
+                        walls.remove(target_edge)
+                        target_edge = random.choice(walls)
+                    elif cell.coordinates_y == len(self.cells)-1 and target_edge.direction == direction.Direction.up:
+                        walls.remove(target_edge)
+                        target_edge = random.choice(walls)
+
+                    self.__set_edge_to_passage(cell, target_edge)
+
+    def __set_edge_to_passage(self, cell, edge):
+        """Change a cell edge type to a passage. Also set corresponding
+        edge in adjacent cell to a passage"""
+        edge_direction = edge.direction
+        adjacent_cell = self.get_adjacent_cell(cell, edge_direction)
+        if adjacent_cell != None:
+                        opposite_edge = adjacent_cell.get_edge(edge_direction.get_opposite())
+                        opposite_edge.type = level_cell.CellEdgeType.passage
+                        edge.type = level_cell.CellEdgeType.passage
+
+    def get_adjacent_cell(self, cell, direction):
+        """Return the adjacent Cell in a given direction"""
+        adjacent_cell_coords = Vector(*cell.coordinates) + Vector(*direction.value)
+        if self.contains_coordinates(adjacent_cell_coords):
+            adjacent_cell = self.get_cell(adjacent_cell_coords)
+            return adjacent_cell
+        else:
+            return None
+
     def __create_cell(self, (x, y)):
         """Create a Cell at provided grid coordinates"""
         cell = level_cell.Cell()
@@ -94,6 +137,7 @@ class Level(Widget):
         return cell
 
     def __add_cells(self):
+        """Initialise all cell edges and add all cells as children"""
         for column in self.cells:
              for cell in column:
                  if isinstance(cell, level_cell.Cell):

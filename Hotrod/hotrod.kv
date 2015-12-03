@@ -30,7 +30,7 @@
 
             cell_size: (self.height/self.rows, self.height/self.rows)
             # Initialise 2-dimensional list of correct size
-            cells: [[None for i in range(self.columns)] for i in range(self.rows)]
+            cells: [[None for i in range(self.rows)] for i in range(self.columns)]
 
     Label:
         font_size: 70
@@ -75,15 +75,15 @@
 
 
 <CellEdge>
-    height: self.parent.height
+    height: self.parent.height + (2 * self.parent.height * self.parent.wall_thickness)
     width: self.parent.width * self.parent.wall_thickness
-    pos: self.parent.pos
+    pos: (self.parent.pos[0], self.parent.pos[1] - self.parent.height * self.parent.wall_thickness)
 
 
 <Wall>:
     canvas:
         Color:
-            rgb: (random.uniform(0,1), random.uniform(0,1), random.uniform(0,1))
+            rgb: (0, 0, 0.5)
         PushMatrix
         Rotate:
             angle: self.angle
