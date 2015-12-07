@@ -5,14 +5,19 @@
 #:import direction direction
 
 <HotrodGame>
+    #So that widgets can access in python code
+    id: root_game
+
     play_area: play_area_id
+    level: level_id
+
     player: player_beetle_id
+    red_enemy: red_beetle
 
     PlayArea:
-        level: level_id
-        player: player_beetle_id
-
         id: play_area_id
+        game: root_game
+
         padding: (self.parent.width - self.parent.height) / 2
 
         size: self.parent.height, self.parent.height
@@ -20,12 +25,21 @@
 
         PlayerBeetle:
             id: player_beetle_id
+            game: root_game
 
             # Takes 40 frames to traverse a cell
-            speed: self.parent.level.cell_size[0] * 0.025
+            speed: self.game.level.cell_size[0] * 0.025
+
+        RedBeetle:
+            id: red_beetle
+            game: root_game
+
+            speed: self.game.level.cell_size[0] * 0.025
 
         Level:
             id: level_id
+            game: root_game
+
             size: self.parent.height, self.parent.width
             pos: (self.padding, 0)
 
@@ -73,7 +87,16 @@
     canvas:
         Color:
             rgb: self.color
-        Ellipse:
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+
+<RedBeetle>
+    canvas:
+        Color:
+            rgb: self.color
+        Rectangle:
             pos: self.pos
             size: self.size
 
@@ -96,6 +119,7 @@
             pos: self.pos
             size: self.size
         PopMatrix
+
 
 <Pellet>:
     canvas:

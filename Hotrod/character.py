@@ -7,23 +7,14 @@ from kivy.vector import Vector
 import direction
 import level_cell
 
-class PlayerBeetle(Widget):
-    # set starting grid position to 0, 0
-    x_position = NumericProperty(0)
-    y_position = NumericProperty(0)
-    grid_position = ReferenceListProperty(x_position, y_position)
-
-    speed = NumericProperty(0)
-    color = ObjectProperty((1, 0, 1))
-
-    current_direction = ObjectProperty(direction.Direction.right)
-    next_direction = ObjectProperty(direction.Direction.right)
+class Character(Widget):
+    game = ObjectProperty(None)
 
     def check_position(self):
         """Move the player to the center of the current cell if it
         tries to move through a wall
         """
-        current_cell = self.parent.level.cells[self.x_position][self.y_position]
+        current_cell = self.game.level.cells[self.x_position][self.y_position]
         current_edge = current_cell.get_edge(self.current_direction)
         if current_edge.type == level_cell.CellEdgeType.wall:
             if self.current_direction == direction.Direction.right:
@@ -47,7 +38,7 @@ class PlayerBeetle(Widget):
         if possible
         """
         if self.next_direction != self.current_direction:
-            current_cell = self.parent.level.cells[self.x_position][self.y_position]
+            current_cell = self.game.level.cells[self.x_position][self.y_position]
             current_edge = current_cell.get_edge(self.next_direction)
 
             if current_edge.type == level_cell.CellEdgeType.passage:
@@ -81,8 +72,8 @@ class PlayerBeetle(Widget):
 
     def update_position(self):
         """Updates the stored position of the player in grid coordinates"""
-        grid_x = int((self.center_x - self.parent.level.padding) / self.parent.level.cell_size[0])
-        grid_y = int(self.center_y / self.parent.level.cell_size[1])
+        grid_x = int((self.center_x - self.game.level.padding) / self.game.level.cell_size[0])
+        grid_y = int(self.center_y / self.game.level.cell_size[1])
         self.grid_position = grid_x, grid_y
 
     def move(self):
@@ -93,3 +84,34 @@ class PlayerBeetle(Widget):
         self.check_position()
         self.update_direction((previous_pos))
         self.update_position()
+
+class EnemyBeetle(Character):
+    pass
+
+class RedBeetle(EnemyBeetle):
+    x_position = NumericProperty(0)
+    y_position = NumericProperty(0)
+    grid_position = ReferenceListProperty(x_position, y_position)
+
+    speed = NumericProperty(0)
+    color = ObjectProperty((1, 0, 0))
+
+    current_direction = ObjectProperty(direction.Direction.left)
+    next_direction = ObjectProperty(direction.Direction.left)
+
+
+class PlayerBeetle(Character):
+    # set starting grid position to 0, 0
+    x_position = NumericProperty(0)
+    y_position = NumericProperty(0)
+    grid_position = ReferenceListProperty(x_position, y_position)
+
+    speed = NumericProperty(0)
+    color = ObjectProperty((1, 0, 1))
+
+    current_direction = ObjectProperty(direction.Direction.right)
+    next_direction = ObjectProperty(direction.Direction.right)
+
+
+
+

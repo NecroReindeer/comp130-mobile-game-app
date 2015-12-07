@@ -14,24 +14,36 @@ import level
 import level_cell
 import character
 
+# This is a separate widget because I intend to make HotrodGame into a layout
 class PlayArea(Widget):
-    player = ObjectProperty(None)
-    level = ObjectProperty(None)
+    """Widget for the gameplay area. Gameplay objects are children of this widget."""
 
     def generate_level(self):
-        self.level.generate_level()
-        self.player.size = self.level.cells[0][0].interior
-        self.player.center = self.level.cells[0][0].center
+        print self.children
+        self.game.level.generate_level()
+        self.game.red_enemy.size = self.game.level.cells[0][0].interior
+        self.game.red_enemy.center = self.game.level.cells[self.game.level.columns - 1][self.game.level.rows - 1].center
+        self.game.player.size = self.game.level.cells[0][0].interior
+        self.game.player.center = self.game.level.cells[0][0].center
 
     def update(self):
-        self.player.move()
-        self.level.check_pellet_collisions()
+        self.game.player.move()
+        self.game.red_enemy.move()
+        self.game.level.check_pellet_collisions()
 
 
 class HotrodGame(Widget):
+    """Widget for controlling the game and application. Widgets can access
+    each other through this widget.
+    This widget has access to each main gameplay widget, general
+    properties such as scores, and settings that affect the game.
+    """
     play_area = ObjectProperty(None)
-    # Allow game controller access to player widget
+    level = ObjectProperty(None)
+
     player = ObjectProperty(None)
+    red_enemy = ObjectProperty(None)
+
     score = NumericProperty(0)
 
     def start(self):
@@ -62,7 +74,7 @@ class HotrodApp(App):
     game = ObjectProperty(None)
 
     def build(self):
-        Config.set('graphics', 'fullscreen', 'auto')
+     #   Config.set('graphics', 'fullscreen', 'auto')
         self.game = HotrodGame()
         Clock.schedule_interval(self.game.update, 1.0/60.0)
         return self.game
@@ -71,6 +83,7 @@ class HotrodApp(App):
         # Called here rather than in build() so that
         # size is correct
         self.game.start()
+
 
 
 if __name__ == '__main__':

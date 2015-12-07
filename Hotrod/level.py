@@ -54,10 +54,10 @@ class Level(Widget):
         the pellet and increase the score if so.
         """
         for pellet in self.pellets:
-            if pellet.collide_widget(self.parent.player):
+            if pellet.collide_widget(self.game.player):
                 self.remove_widget(pellet)
                 self.pellets.remove(pellet)
-                self.parent.parent.score += 10
+                self.game.score += 10
 
     def __generate_cells(self, active_cells):
         """Generate the maze
