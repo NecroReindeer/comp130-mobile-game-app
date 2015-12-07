@@ -1,4 +1,9 @@
 __author__ = 'Harriet'
+"""Module to keep track of things relating to the level, such as cells and pellets.
+   Children:
+   level_cell.Cell instances (after level generation)
+   collectable.Pellet instances (after level generation)
+"""
 
 import random
 
@@ -6,15 +11,17 @@ from kivy.uix.widget import Widget
 from kivy.vector import Vector
 from kivy.properties import ObjectProperty, NumericProperty, ListProperty
 
-import level_cell
 import direction
 import collectable
+import level_cell
 
 class Level(Widget):
     """Widget for the level.
 
     Public methods:
-    generate_level -- start level generation process"""
+    generate_level() -- start level generation process
+    check_pellet_collsions() -- check if player has collided with any pellets
+    """
     padding = NumericProperty()
 
     columns = NumericProperty(10)
@@ -43,18 +50,21 @@ class Level(Widget):
         self.__add_pellets()
 
     def check_pellet_collisions(self):
+        """Check if player has collided with any pellets. Remove
+        the pellet and increase the score if so.
+        """
         for pellet in self.pellets:
             if pellet.collide_widget(self.parent.player):
                 self.remove_widget(pellet)
                 self.pellets.remove(pellet)
                 self.parent.parent.score += 10
 
-
-
-
-
-
     def __generate_cells(self, active_cells):
+        """Generate the maze
+
+        Arguments:
+        active_cells -- list of active cells. Should contain the first cell.
+        """
         # Determines which index the algorithm generates from.
         # Changing this yields different results
         current_index = len(active_cells) - 1
@@ -85,12 +95,15 @@ class Level(Widget):
             current_cell.get_edge(direction).type = level_cell.CellEdgeType.wall
 
     def __add_pellets(self):
+        """Add a pellet to each cell in the level
+        """
         for column in self.cells:
             for cell in column:
                 pellet = collectable.Pellet()
                 pellet.width = cell.width / 10
                 pellet.height = cell.height / 10
                 pellet.center = cell.center
+                # To keep track of coordinates for combos
                 pellet.coordinates = cell.coordinates
                 self.pellets.append(pellet)
                 self.add_widget(pellet)

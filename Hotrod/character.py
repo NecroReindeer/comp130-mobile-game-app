@@ -13,7 +13,7 @@ class PlayerBeetle(Widget):
     y_position = NumericProperty(0)
     grid_position = ReferenceListProperty(x_position, y_position)
 
-    speed = NumericProperty(5)
+    speed = NumericProperty(0)
     color = ObjectProperty((1, 0, 1))
 
     current_direction = ObjectProperty(direction.Direction.right)

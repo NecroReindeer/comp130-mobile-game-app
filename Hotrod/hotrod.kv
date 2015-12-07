@@ -21,6 +21,9 @@
         PlayerBeetle:
             id: player_beetle_id
 
+            # Takes 40 frames to traverse a cell
+            speed: self.parent.level.cell_size[0] * 0.025
+
         Level:
             id: level_id
             size: self.parent.height, self.parent.width
