@@ -21,6 +21,7 @@ class Level(Widget):
     Public methods:
     generate_level() -- start level generation process
     check_pellet_collsions() -- check if player has collided with any pellets
+    get_cell((x, y)) -- returns the cell at the given grid coordinates
     """
     padding = NumericProperty()
 
@@ -59,6 +60,15 @@ class Level(Widget):
                 self.pellets.remove(pellet)
                 self.game.score += 10
 
+    def get_cell(self, (x, y)):
+        """Return the cell at given grid coordinates
+
+        Arguments:
+        (x, y) -- grid coordinate tuple
+        """
+        return self.cells[x][y]
+
+
     def __generate_cells(self, active_cells):
         """Generate the maze
 
@@ -78,7 +88,7 @@ class Level(Widget):
         direction = current_cell.get_random_uninitialised_direction()
         next_cell_coords = Vector(*current_cell.coordinates) + Vector(*direction.value)
 
-        if self.contains_coordinates(next_cell_coords):
+        if self.__contains_coordinates(next_cell_coords):
             next_cell = self.get_cell(next_cell_coords)
             # Create a new cell and set the edges to passage if no cell exists at next_cell_coords
             if next_cell == None:
@@ -108,7 +118,6 @@ class Level(Widget):
                 self.pellets.append(pellet)
                 self.add_widget(pellet)
 
-
     def __remove_dead_ends(self):
         """Ensure that there are no one-cell dead ends"""
         for column in self.cells:
@@ -116,6 +125,8 @@ class Level(Widget):
                 walls = cell.get_walls()
                 if len(walls) >= 3:
                     target_edge = random.choice(walls)
+
+                    # Ensure that outer walls are not removed
                     if cell.coordinates_x == 0 and target_edge.direction == direction.Direction.left:
                         walls.remove(target_edge)
                         target_edge = random.choice(walls)
@@ -136,16 +147,16 @@ class Level(Widget):
         """Change a cell edge type to a passage. Also set corresponding
         edge in adjacent cell to a passage"""
         edge_direction = edge.direction
-        adjacent_cell = self.__get_adjacent_cell(cell, edge_direction)
+        adjacent_cell = self.get_adjacent_cell(cell, edge_direction)
         if adjacent_cell != None:
                         opposite_edge = adjacent_cell.get_edge(edge_direction.get_opposite())
                         opposite_edge.type = level_cell.CellEdgeType.passage
                         edge.type = level_cell.CellEdgeType.passage
 
-    def __get_adjacent_cell(self, cell, direction):
+    def get_adjacent_cell(self, cell, direction):
         """Return the adjacent Cell in a given direction"""
         adjacent_cell_coords = Vector(*cell.coordinates) + Vector(*direction.value)
-        if self.contains_coordinates(adjacent_cell_coords):
+        if self.__contains_coordinates(adjacent_cell_coords):
             adjacent_cell = self.get_cell(adjacent_cell_coords)
             return adjacent_cell
         else:
@@ -155,7 +166,7 @@ class Level(Widget):
         """Create a Cell at provided grid coordinates"""
         cell = level_cell.Cell()
         cell.size = self.cell_size
-        cell.pos = self.get_cell_position((x, y), cell.size)
+        cell.pos = self.__get_cell_position((x, y), cell.size)
         cell.coordinates = x, y
         self.cells[x][y] = cell
         return cell
@@ -168,7 +179,7 @@ class Level(Widget):
                  # Add widget at index 1 so that PlayerBeetle remains at 0
                  self.add_widget(cell, 1)
 
-    def get_cell_position(self, (x, y), (width, height)):
+    def __get_cell_position(self, (x, y), (width, height)):
         """Convert grid coordinates to window coordinates and return as a tuple
 
         Arguments:
@@ -185,15 +196,7 @@ class Level(Widget):
         """Return a random grid coordinate tuple"""
         return (random.randrange(0, self.columns), random.randrange(0, self.rows))
 
-    def get_cell(self, (x, y)):
-        """Return the cell at given grid coordinates
-
-        Arguments:
-        (x, y) -- grid coordinate tuple
-        """
-        return self.cells[x][y]
-
-    def contains_coordinates(self, (x, y)):
+    def __contains_coordinates(self, (x, y)):
         """Return True if the grid coordinates are in the allocated level space
 
         Arguments:

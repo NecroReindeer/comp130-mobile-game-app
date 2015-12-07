@@ -19,7 +19,6 @@ class PlayArea(Widget):
     """Widget for the gameplay area. Gameplay objects are children of this widget."""
 
     def generate_level(self):
-        print self.children
         self.game.level.generate_level()
         self.game.red_enemy.size = self.game.level.cells[0][0].interior
         self.game.red_enemy.center = self.game.level.cells[self.game.level.columns - 1][self.game.level.rows - 1].center
