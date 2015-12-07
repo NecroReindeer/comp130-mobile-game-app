@@ -36,7 +36,7 @@
         font_size: 70
         center_x: root.width / 10
         top: root.top
-        text: "Oh no"
+        text: str(root.score)
 
 
 <Cell>
@@ -45,6 +45,7 @@
     bottom_edge: bottom_edge_id
     top_edge: top_edge_id
 
+    # Size of cell within the walls
     interior: (self.width - self.width * self.wall_thickness * 2, self.height - self.height * self.wall_thickness * 2)
     edges: [self.left_edge, self.bottom_edge, self.right_edge, self.top_edge]
 
@@ -92,3 +93,11 @@
             pos: self.pos
             size: self.size
         PopMatrix
+
+<Pellet>:
+    canvas:
+        Color:
+            rgb: (0.9, 0.9, 0)
+        Ellipse:
+            pos: self.pos
+            size: self.size
