@@ -1,5 +1,7 @@
 __author__ = 'Harriet'
 
+import random
+
 from kivy.uix.widget import Widget
 from kivy.properties import ListProperty
 from kivy.properties import ObjectProperty
@@ -102,12 +104,6 @@ class Character(Widget):
 
 
 class EnemyBeetle(Character):
-    """Abstract class for enemy beetles"""
-
-
-class RedBeetle(EnemyBeetle):
-    color = ObjectProperty((1, 0, 0))
-
     target_position = ObjectProperty(None)
 
     def move(self):
@@ -150,18 +146,37 @@ class RedBeetle(EnemyBeetle):
             if distance < shortest_distance or shortest_distance == None:
                 shortest_distance = distance
                 best_move = move
+            elif distance == shortest_distance:
+                # Choose randomly if both are equal distance
+                best_move = random.choice((move, best_move))
         return best_move
 
-
     def set_next_direction(self):
-        self.target_position = self.game.player.grid_position
+        self.target_position = self.get_target_position()
         possible_moves = self.get_possible_moves(self.current_direction)
         best_move = self.get_shortest_move(possible_moves)
         self.next_direction = best_move
 
 
-class PlayerBeetle(Character):
+class RedBeetle(EnemyBeetle):
+    color = ObjectProperty((1, 0, 0))
+
+    def get_target_position(self):
+        return self.game.player.grid_position
+
+
+
+class PinkBeetle(EnemyBeetle):
     color = ObjectProperty((1, 0, 1))
+
+    def get_target_position(self):
+        player_position = self.game.player.grid_position
+        player_direction = self.game.player.current_direction
+
+
+
+class PlayerBeetle(Character):
+    color = ObjectProperty((1, 1, 0))
 
 
 

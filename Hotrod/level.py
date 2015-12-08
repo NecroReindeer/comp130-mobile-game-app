@@ -14,6 +14,7 @@ from kivy.properties import ObjectProperty, NumericProperty, ListProperty
 import direction
 import collectable
 import level_cell
+import error
 
 class Level(Widget):
     """Widget for the level.
@@ -118,6 +119,7 @@ class Level(Widget):
                 self.pellets.append(pellet)
                 self.add_widget(pellet)
 
+
     def __remove_dead_ends(self):
         """Ensure that there are no one-cell dead ends"""
         for column in self.cells:
@@ -125,33 +127,22 @@ class Level(Widget):
                 walls = cell.get_walls()
                 if len(walls) >= 3:
                     target_edge = random.choice(walls)
-
-                    # Ensure that outer walls are not removed
-                    if cell.coordinates_x == 0 and target_edge.direction == direction.Direction.left:
-                        walls.remove(target_edge)
-                        target_edge = random.choice(walls)
-                    elif cell.coordinates_x == len(self.cells)-1 and target_edge.direction == direction.Direction.right:
-                        walls.remove(target_edge)
-                        target_edge = random.choice(walls)
-
-                    if cell.coordinates_y == 0 and target_edge.direction == direction.Direction.down:
-                        walls.remove(target_edge)
-                        target_edge = random.choice(walls)
-                    elif cell.coordinates_y == len(self.cells)-1 and target_edge.direction == direction.Direction.up:
-                        walls.remove(target_edge)
-                        target_edge = random.choice(walls)
-
-                    self.__set_edge_to_passage(cell, target_edge)
+                    while True:
+                        try:
+                            self.__set_edge_to_passage(cell, target_edge)
+                            break
+                        except AttributeError:
+                            walls.remove(target_edge)
+                            target_edge = random.choice(walls)
 
     def __set_edge_to_passage(self, cell, edge):
         """Change a cell edge type to a passage. Also set corresponding
         edge in adjacent cell to a passage"""
         edge_direction = edge.direction
         adjacent_cell = self.get_adjacent_cell(cell, edge_direction)
-        if adjacent_cell != None:
-                        opposite_edge = adjacent_cell.get_edge(edge_direction.get_opposite())
-                        opposite_edge.type = level_cell.CellEdgeType.passage
-                        edge.type = level_cell.CellEdgeType.passage
+        opposite_edge = adjacent_cell.get_edge(edge_direction.get_opposite())
+        opposite_edge.type = level_cell.CellEdgeType.passage
+        edge.type = level_cell.CellEdgeType.passage
 
     def get_adjacent_cell(self, cell, direction):
         """Return the adjacent Cell in a given direction"""

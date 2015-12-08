@@ -15,6 +15,7 @@ from kivy.vector import Vector
 from enum import Enum
 
 import collectable
+import direction
 
 class Cell(Widget):
     """Widget representing each cell/square on the play area.
