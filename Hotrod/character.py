@@ -1,9 +1,16 @@
-__author__ = 'Harriet'
+"""This module includes classes for the enemies and player.
+
+Classes:
+Character(Widget) -- class that all characters inherit from
+EnemyBeetle(Character) -- class that all enemies inherit from
+PlayerBeetle(Character) -- class for the player beetle
+RedBeetle(EnemyBeetle) -- class for the red beetle enemy
+PinkBeetle(EnemyBeetle) -- class for the pink beetle enemy
+"""
 
 import random
 
 from kivy.uix.widget import Widget
-from kivy.properties import ListProperty
 from kivy.properties import ObjectProperty
 from kivy.properties import NumericProperty
 from kivy.properties import ReferenceListProperty
@@ -11,8 +18,15 @@ from kivy.vector import Vector
 
 import direction
 import level_cell
+import test
 
 class Character(Widget):
+    """Class that characters inherit from.
+
+    Public methods:
+    move() -- move the character. Should be called every frame.
+    initialise(start_position) -- set up the size and position of the character
+    """
     game = ObjectProperty(None)
 
     # All characters have the following properties
@@ -26,6 +40,22 @@ class Character(Widget):
     current_direction = ObjectProperty(direction.Direction.right)
     next_direction = ObjectProperty(direction.Direction.right)
 
+    def move(self):
+        if isinstance(self, EnemyBeetle):
+            self._set_next_direction()
+        # Copy of previous window position
+        previous_pos = self.center[:]
+        self.pos = Vector(self.current_direction.value[0] * self.speed,
+                          self.current_direction.value[1] * self.speed) + self.pos
+        self._check_position()
+        self._update_direction((previous_pos))
+        self._update_position()
+
+    def initialise(self, start_position):
+        starting_cell = self.game.level.get_cell(start_position)
+        # Set size to interior cell size
+        self.size = starting_cell.interior
+        self.center = starting_cell.center
 
     def _check_position(self):
         """Move the player to the center of the current cell if it
@@ -89,53 +119,42 @@ class Character(Widget):
 
     def _update_position(self):
         """Updates the stored position of the player in grid coordinates"""
-        grid_x = int((self.center_x - self.game.level.padding) / self.game.level.cell_size[0])
-        grid_y = int(self.center_y / self.game.level.cell_size[1])
-        self.grid_position = grid_x, grid_y
-
-    def move(self):
-        # Copy of previous window position
-        previous_pos = self.center[:]
-        self.pos = Vector(self.current_direction.value[0] * self.speed,
-                          self.current_direction.value[1] * self.speed) + self.pos
-        self._check_position()
-        self._update_direction((previous_pos))
-        self._update_position()
+        grid_position = self.game.level.convert_to_grid_position(self.center)
+        self.grid_position = grid_position
 
 
 class EnemyBeetle(Character):
+    """Class for enemy characters."""
     target_position = ObjectProperty(None)
 
-    def move(self):
-        # Copy of previous window position
-        self.set_next_direction()
-        previous_pos = self.center[:]
-        self.pos = Vector(self.current_direction.value[0] * self.speed,
-                          self.current_direction.value[1] * self.speed) + self.pos
-        self._check_position()
-        self._update_direction((previous_pos))
-        self._update_position()
+    def _set_next_direction(self):
+        """Set the next direction"""
+        self.target_position = self.get_target_position()
+        possible_moves = self.__get_possible_moves(self.current_direction)
+        best_move = self.__get_shortest_move(possible_moves)
+        self.next_direction = best_move
 
-    def direction_is_allowed(self, direction):
-        current_cell = self.game.level.get_cell(self.grid_position)
-        # Cannot move in the direction if it reverses current direction or if there is a wall
-        if current_cell.get_edge(direction).type == level_cell.CellEdgeType.wall:
-            return False
-        elif direction == self.current_direction.get_opposite():
-            return False
-        else:
-            return True
+    def __get_possible_moves(self, current_direction):
+        """Return the directions the enemy is allowed to move in
 
-    def get_possible_moves(self, current_direction):
+        Arguments:
+        current_direction -- current direction of travel travelling in as direction.Direction
+        """
         directions = [direction.Direction.right,
                       direction.Direction.down,
                       direction.Direction.left,
                       direction.Direction.up]
-        possible_directions = [dir for dir in directions if self.direction_is_allowed(dir)]
+        possible_directions = [dir for dir in directions if self.__direction_is_allowed(dir)]
         return possible_directions
 
+    def __get_shortest_move(self, possible_moves):
+        """Return the direction that results in being in the cell nearest the
+        target cell as direction.Direction.
+        Choose randomly if cells are an equal distance from the target.
 
-    def get_shortest_move(self, possible_moves):
+        Arguments:
+        possible_moves -- list of directions the enemy is allowed to travel in
+        """
         current_cell = self.game.level.get_cell(self.grid_position)
         shortest_distance = None
         best_move = None
@@ -151,17 +170,30 @@ class EnemyBeetle(Character):
                 best_move = random.choice((move, best_move))
         return best_move
 
-    def set_next_direction(self):
-        self.target_position = self.get_target_position()
-        possible_moves = self.get_possible_moves(self.current_direction)
-        best_move = self.get_shortest_move(possible_moves)
-        self.next_direction = best_move
+    def __direction_is_allowed(self, direction):
+        """Return true if the enemy is allowed to travel in the given direction,
+        else return false.
+
+        Arguments:
+        direction -- direction to be checked as direction.Direction
+        """
+        current_cell = self.game.level.get_cell(self.grid_position)
+        # Cannot move in the direction if it reverses current direction or if there is a wall
+        if current_cell.get_edge(direction).type == level_cell.CellEdgeType.wall:
+            return False
+        elif direction == self.current_direction.get_opposite():
+            return False
+        else:
+            return True
 
 
 class RedBeetle(EnemyBeetle):
     color = ObjectProperty((1, 0, 0))
 
     def get_target_position(self):
+        """Return the target position"""
+        # For testing purposes
+        self.target.pos = self.game.level.convert_to_window_position(self.game.player.grid_position)
         # Target position is always player's position
         return self.game.player.grid_position
 
@@ -170,14 +202,18 @@ class PinkBeetle(EnemyBeetle):
     color = ObjectProperty((1, 0, 1))
 
     def get_target_position(self):
-        # Target position is the 2 cells ahead of the player
+        """Return the target position"""
         player_position = self.game.player.grid_position
         player_direction_vector = self.game.player.current_direction.value
+        # Target position is the 2 cells ahead of the player
         target_position = Vector(player_position) + 2 * player_direction_vector
+        # For testing purposes
+        self.target.pos = self.game.level.convert_to_window_position(target_position)
         return target_position
 
 
 class PlayerBeetle(Character):
+    """Class for the player character. All methods used are in Character."""
     color = ObjectProperty((1, 1, 0))
 
 

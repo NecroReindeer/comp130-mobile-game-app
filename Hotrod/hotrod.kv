@@ -15,6 +15,8 @@
     red_enemy: red_beetle
     pink_enemy: pink_beetle
 
+    characters: [self.player, self.red_enemy, self.pink_enemy]
+
     PlayArea:
         id: play_area_id
         game: root_game
@@ -100,6 +102,7 @@
 
 
 <RedBeetle>
+    target: red_target
     canvas:
         Color:
             rgb: self.color
@@ -107,13 +110,22 @@
             pos: self.pos
             size: self.size
 
+    Target:
+        id: red_target
+        color: self.parent.color
+
 <PinkBeetle>
+    target: pink_target
     canvas:
         Color:
             rgb: self.color
         Rectangle:
             pos: self.pos
             size: self.size
+
+    Target:
+        id: pink_target
+        color: self.parent.color
 
 <CellEdge>
     height: self.parent.height + (2 * self.parent.height * self.parent.wall_thickness)
@@ -121,7 +133,7 @@
     pos: (self.parent.pos[0], self.parent.pos[1] - self.parent.height * self.parent.wall_thickness)
 
 
-<Wall>:
+<Wall>
     canvas:
         Color:
             rgb: (0, 0, 0.5)
@@ -135,10 +147,19 @@
         PopMatrix
 
 
-<Pellet>:
+<Pellet>
     canvas:
         Color:
             rgb: (0.9, 0.9, 0)
+        Ellipse:
+            pos: self.pos
+            size: self.size
+
+
+<Target>
+    canvas:
+        Color:
+            rgb: self.color
         Ellipse:
             pos: self.pos
             size: self.size

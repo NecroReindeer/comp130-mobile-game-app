@@ -1,4 +1,3 @@
-__author__ = 'Harriet'
 
 from kivy.uix.widget import Widget
 from kivy.properties import NumericProperty

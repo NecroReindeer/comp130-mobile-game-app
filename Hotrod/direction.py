@@ -1,6 +1,6 @@
-__author__ = 'Hat'
 """This module includes an enum for representing the directions left, down,
-right and up"""
+right and up
+"""
 
 from kivy.vector import Vector
 

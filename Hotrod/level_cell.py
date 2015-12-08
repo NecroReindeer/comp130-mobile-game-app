@@ -1,10 +1,11 @@
-__author__ = 'Hat'
 """This module includes classes relating to the level's cells.
+
 Classes:
-Cell -- widget representing level cell
-CellEdge -- widget for the edges of the cell
-CellEdgeType -- enum for classifying an edge as a wall or a passage
-Wall -- widget representing cell walls"""
+Cell(Widget) -- widget representing level cell
+CellEdge(Widget) -- widget for the edges of the cell
+CellEdgeType(Widget) -- enum for classifying an edge as a wall or a passage
+Wall(Widget) -- widget representing cell walls
+"""
 
 import random
 

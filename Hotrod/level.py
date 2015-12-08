@@ -1,8 +1,7 @@
-__author__ = 'Harriet'
-"""Module to keep track of things relating to the level, such as cells and pellets.
-   Children:
-   level_cell.Cell instances (after level generation)
-   collectable.Pellet instances (after level generation)
+"""This module keeps track of things relating to the level, such as cells and pellets.
+
+Classes:
+Level(Widget) -- class for generating level and storing information about the level
 """
 
 import random
@@ -23,6 +22,12 @@ class Level(Widget):
     generate_level() -- start level generation process
     check_pellet_collsions() -- check if player has collided with any pellets
     get_cell((x, y)) -- returns the cell at the given grid coordinates
+    convert_to_grid_position((x, y)) -- convert window coordinates to grid coordinates
+    convert_to_window_position((x, y)) -- convert grid coordinates to window coordinates
+
+    Children:
+    level_cell.Cell instances (after level generation)
+    collectable.Pellet instances (after level generation)
     """
     padding = NumericProperty()
 
@@ -69,6 +74,25 @@ class Level(Widget):
         """
         return self.cells[x][y]
 
+    def convert_to_grid_position(self, (x, y)):
+        """Convert window position coordinates to the game's grid coordinates
+
+        Arguments:
+        (x, y) -- window position coordinates tuple
+        """
+        grid_x = int((x - self.padding) / self.cell_size[0])
+        grid_y = int(y / self.cell_size[1])
+        return grid_x, grid_y
+
+    def convert_to_window_position(self, (x, y)):
+        """Convert grid position coordinates to window coordinates
+
+        Arguments:
+        (x, y) -- grid position coordinates tuple
+        """
+        window_x = self.cell_size[0] * x + self.padding
+        window_y = self.cell_size[1] * y
+        return window_x, window_y
 
     def __generate_cells(self, active_cells):
         """Generate the maze
@@ -119,7 +143,6 @@ class Level(Widget):
                 self.pellets.append(pellet)
                 self.add_widget(pellet)
 
-
     def __remove_dead_ends(self):
         """Ensure that there are no one-cell dead ends"""
         for column in self.cells:
@@ -161,7 +184,7 @@ class Level(Widget):
         """Create a Cell at provided grid coordinates"""
         cell = level_cell.Cell()
         cell.size = self.cell_size
-        cell.pos = self.__get_cell_position((x, y), cell.size)
+        cell.pos = self.convert_to_window_position((x, y))
         cell.coordinates = x, y
         self.cells[x][y] = cell
         return cell
@@ -173,15 +196,6 @@ class Level(Widget):
                  cell.set_edges()
                  # Add widget at index 1 so that PlayerBeetle remains at 0
                  self.add_widget(cell, 1)
-
-    def __get_cell_position(self, (x, y), (width, height)):
-        """Convert grid coordinates to window coordinates and return as a tuple
-
-        Arguments:
-        (x, y) -- grid coordinate tuple
-        (width, height) -- cell size tuple
-        """
-        return ((width * x + self.padding, height * y))
 
     def __get_random_direction(self):
         """Return a random direction.Direction"""

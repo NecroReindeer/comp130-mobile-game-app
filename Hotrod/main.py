@@ -31,17 +31,13 @@ class PlayArea(Widget):
         self.game.level.generate_level()
 
     def initialise_characters(self):
-        self.game.red_enemy.size = self.game.level.cells[0][0].interior
-        self.game.red_enemy.center = self.game.level.cells[self.game.level.columns - 1][self.game.level.rows - 1].center
-        self.game.pink_enemy.size = self.game.level.cells[0][0].interior
-        self.game.pink_enemy.center = self.game.level.cells[0][self.game.level.rows - 1].center
-        self.game.player.size = self.game.level.cells[0][0].interior
-        self.game.player.center = self.game.level.cells[0][0].center
+        self.game.player.initialise((0, 0))
+        self.game.red_enemy.initialise((self.game.level.columns-1, self.game.level.rows - 1))
+        self.game.pink_enemy.initialise((0, self.game.level.rows - 1))
 
     def update(self):
-        self.game.player.move()
-        self.game.red_enemy.move()
-        self.game.pink_enemy.move()
+        for character in self.game.characters:
+            character.move()
         self.game.level.check_pellet_collisions()
 
 
@@ -57,6 +53,7 @@ class HotrodGame(Widget):
     player = ObjectProperty(None)
     red_enemy = ObjectProperty(None)
 
+    characters = ListProperty()
     score = NumericProperty(0)
 
     def start(self):
@@ -95,7 +92,6 @@ class HotrodApp(App):
         # Called here rather than in build() so that
         # size is correct
         self.game.start()
-
 
 
 if __name__ == '__main__':
