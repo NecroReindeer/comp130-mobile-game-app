@@ -211,6 +211,23 @@ class PinkBeetle(EnemyBeetle):
         self.target.pos = self.game.level.convert_to_window_position(target_position)
         return target_position
 
+class BlueBeetle(EnemyBeetle):
+    color = ObjectProperty((0, 1, 1))
+
+    def get_target_position(self):
+        player_position = self.game.player.grid_position
+        player_direction_vector = self.game.player.current_direction.value
+        space_ahead_of_player = Vector(player_position) + 2 * player_direction_vector
+        red_beetle_position = self.game.red_enemy.grid_position
+
+        # Target position is double the vector between 2 spaces ahead of the
+        # player and the red beetle
+        target_position = 2 * Vector(space_ahead_of_player) - Vector(red_beetle_position)
+        # For testing purposes
+        self.target.pos = self.game.level.convert_to_window_position(target_position)
+        return target_position
+
+
 
 class PlayerBeetle(Character):
     """Class for the player character. All methods used are in Character."""

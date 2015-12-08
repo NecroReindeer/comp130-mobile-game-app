@@ -33,7 +33,8 @@ class PlayArea(Widget):
     def initialise_characters(self):
         self.game.player.initialise((0, 0))
         self.game.red_enemy.initialise((self.game.level.columns-1, self.game.level.rows - 1))
-        self.game.pink_enemy.initialise((0, self.game.level.rows - 1))
+        self.game.pink_enemy.initialise((0, self.game.level.rows-1))
+        self.game.blue_enemy.initialise((self.game.level.columns-1, 0))
 
     def update(self):
         for character in self.game.characters:

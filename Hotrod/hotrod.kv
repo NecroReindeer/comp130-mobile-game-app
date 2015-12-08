@@ -14,8 +14,9 @@
     player: player_beetle_id
     red_enemy: red_beetle
     pink_enemy: pink_beetle
+    blue_enemy: blue_beetle
 
-    characters: [self.player, self.red_enemy, self.pink_enemy]
+    characters: [self.player, self.red_enemy, self.pink_enemy, self.blue_enemy]
 
     PlayArea:
         id: play_area_id
@@ -41,6 +42,12 @@
 
         PinkBeetle:
             id: pink_beetle
+            game: root_game
+
+            speed: self.game.level.cell_size[0] * 0.025
+
+        BlueBeetle:
+            id: blue_beetle
             game: root_game
 
             speed: self.game.level.cell_size[0] * 0.025
@@ -114,6 +121,7 @@
         id: red_target
         color: self.parent.color
 
+
 <PinkBeetle>
     target: pink_target
     canvas:
@@ -126,6 +134,21 @@
     Target:
         id: pink_target
         color: self.parent.color
+
+
+<BlueBeetle>
+    target: blue_target
+    canvas:
+        Color:
+            rgb: self.color
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    Target:
+        id: blue_target
+        color: self.parent.color
+
 
 <CellEdge>
     height: self.parent.height + (2 * self.parent.height * self.parent.wall_thickness)
