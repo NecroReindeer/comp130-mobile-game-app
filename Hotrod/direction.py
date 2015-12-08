@@ -2,16 +2,18 @@ __author__ = 'Hat'
 """This module includes an enum for representing the directions left, down,
 right and up"""
 
+from kivy.vector import Vector
+
 from enum import Enum
 
 class Direction(Enum):
     """Enum for directions.
     Values are the vectors representing the direction.
     """
-    left = (-1, 0)
-    down = (0, -1)
-    right = (1, 0)
-    up = (0, 1)
+    left = Vector(-1, 0)
+    down = Vector(0, -1)
+    right = Vector(1, 0)
+    up = Vector(0, 1)
 
     def get_angle(self):
         """Return the rotation angle relevant to Direction"""

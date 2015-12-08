@@ -162,17 +162,19 @@ class RedBeetle(EnemyBeetle):
     color = ObjectProperty((1, 0, 0))
 
     def get_target_position(self):
+        # Target position is always player's position
         return self.game.player.grid_position
-
 
 
 class PinkBeetle(EnemyBeetle):
     color = ObjectProperty((1, 0, 1))
 
     def get_target_position(self):
+        # Target position is the 2 cells ahead of the player
         player_position = self.game.player.grid_position
-        player_direction = self.game.player.current_direction
-
+        player_direction_vector = self.game.player.current_direction.value
+        target_position = Vector(player_position) + 2 * player_direction_vector
+        return target_position
 
 
 class PlayerBeetle(Character):

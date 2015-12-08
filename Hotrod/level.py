@@ -128,10 +128,11 @@ class Level(Widget):
                 if len(walls) >= 3:
                     target_edge = random.choice(walls)
                     while True:
+                        # If the wall isn't at the edge, remove it
                         try:
                             self.__set_edge_to_passage(cell, target_edge)
                             break
-                        except AttributeError:
+                        except error.NonExistentCellError:
                             walls.remove(target_edge)
                             target_edge = random.choice(walls)
 
@@ -140,9 +141,12 @@ class Level(Widget):
         edge in adjacent cell to a passage"""
         edge_direction = edge.direction
         adjacent_cell = self.get_adjacent_cell(cell, edge_direction)
-        opposite_edge = adjacent_cell.get_edge(edge_direction.get_opposite())
-        opposite_edge.type = level_cell.CellEdgeType.passage
-        edge.type = level_cell.CellEdgeType.passage
+        if adjacent_cell != None:
+            opposite_edge = adjacent_cell.get_edge(edge_direction.get_opposite())
+            opposite_edge.type = level_cell.CellEdgeType.passage
+            edge.type = level_cell.CellEdgeType.passage
+        else:
+            raise error.NonExistentCellError("Oh no!")
 
     def get_adjacent_cell(self, cell, direction):
         """Return the adjacent Cell in a given direction"""

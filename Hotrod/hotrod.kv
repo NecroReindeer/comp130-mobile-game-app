@@ -13,6 +13,7 @@
 
     player: player_beetle_id
     red_enemy: red_beetle
+    pink_enemy: pink_beetle
 
     PlayArea:
         id: play_area_id
@@ -32,6 +33,12 @@
 
         RedBeetle:
             id: red_beetle
+            game: root_game
+
+            speed: self.game.level.cell_size[0] * 0.025
+
+        PinkBeetle:
+            id: pink_beetle
             game: root_game
 
             speed: self.game.level.cell_size[0] * 0.025
@@ -100,6 +107,13 @@
             pos: self.pos
             size: self.size
 
+<PinkBeetle>
+    canvas:
+        Color:
+            rgb: self.color
+        Rectangle:
+            pos: self.pos
+            size: self.size
 
 <CellEdge>
     height: self.parent.height + (2 * self.parent.height * self.parent.wall_thickness)

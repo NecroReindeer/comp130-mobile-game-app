@@ -19,20 +19,29 @@ import character
 class PlayArea(Widget):
     """Widget for the gameplay area. Gameplay objects are children of this widget."""
 
+    def start_game(self):
+        self.generate_level()
+        self.initialise_characters()
+
     def generate_level(self):
         seed = random.randint(0, sys.maxint)
     #   seed = 188100911
         print seed
         random.seed(seed)
         self.game.level.generate_level()
+
+    def initialise_characters(self):
         self.game.red_enemy.size = self.game.level.cells[0][0].interior
         self.game.red_enemy.center = self.game.level.cells[self.game.level.columns - 1][self.game.level.rows - 1].center
+        self.game.pink_enemy.size = self.game.level.cells[0][0].interior
+        self.game.pink_enemy.center = self.game.level.cells[0][self.game.level.rows - 1].center
         self.game.player.size = self.game.level.cells[0][0].interior
         self.game.player.center = self.game.level.cells[0][0].center
 
     def update(self):
         self.game.player.move()
         self.game.red_enemy.move()
+        self.game.pink_enemy.move()
         self.game.level.check_pellet_collisions()
 
 
@@ -51,7 +60,7 @@ class HotrodGame(Widget):
     score = NumericProperty(0)
 
     def start(self):
-        self.play_area.generate_level()
+        self.play_area.start_game()
 
     def update(self, dt):
         self.play_area.update()
