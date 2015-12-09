@@ -14,6 +14,7 @@ from kivy.uix.widget import Widget
 from kivy.properties import ObjectProperty
 from kivy.properties import NumericProperty
 from kivy.properties import ReferenceListProperty
+from kivy.properties import BooleanProperty
 from kivy.vector import Vector
 
 import direction
@@ -53,6 +54,7 @@ class Character(Widget):
         self._update_position()
 
     def initialise(self, start_position):
+        self.grid_position = start_position
         starting_cell = self.game.level.get_cell(start_position)
         # Set size to interior cell size
         self.size = starting_cell.interior
@@ -126,8 +128,6 @@ class Character(Widget):
 
 class EnemyBeetle(Character):
     """Class for enemy characters."""
-    target_position = ObjectProperty(None)
-
     def _set_next_direction(self):
         """Set the next direction"""
         self.target_position = self.get_target_position()
@@ -187,6 +187,12 @@ class EnemyBeetle(Character):
         else:
             return True
 
+    def on_grid_position(self, instance, value):
+        """Kivy event called when grid position changes. Check if enemy has
+        collided with player on enemy position change"""
+        if self.game.player.grid_position == self.grid_position and self.game.game_in_progress:
+                self.game.player.dead = True
+
 
 class RedBeetle(EnemyBeetle):
     color = ObjectProperty((1, 0, 0))
@@ -228,6 +234,7 @@ class BlueBeetle(EnemyBeetle):
         self.target.pos = self.game.level.convert_to_window_position(target_position)
         return target_position
 
+
 class OrangeBeetle(EnemyBeetle):
     color = ObjectProperty((1, 0.5, 0))
 
@@ -246,9 +253,30 @@ class OrangeBeetle(EnemyBeetle):
         self.target.pos = self.game.level.convert_to_window_position(target_position)
         return target_position
 
+
 class PlayerBeetle(Character):
     """Class for the player character. All methods used are in Character."""
     color = ObjectProperty((1, 1, 0))
+    dead = BooleanProperty(False)
+
+    def on_grid_position(self, instance, value):
+        """Kivy event called when grid position changes. Check if player has
+        collided with an enemy on player position change"""
+        for enemy in self.game.enemies:
+            if enemy.grid_position == self.grid_position and self.game.game_in_progress:
+                self.dead = True
+
+    def on_dead(self, instance, value):
+        """Kivy event called when player is set to dead. Take off a life and
+        resets player status to alive."""
+        if self.dead:
+             self.game.lives -= 1
+             print "I died"
+             self.dead = False
+
+        else:
+            print "I'm alive"
+            pass
 
 
 

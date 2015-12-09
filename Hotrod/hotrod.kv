@@ -21,7 +21,7 @@
     blue_enemy: blue_beetle
     orange_enemy: orange_beetle
 
-    characters: [self.player, self.red_enemy, self.pink_enemy, self.blue_enemy, self.orange_enemy]
+    enemies: [self.red_enemy, self.pink_enemy, self.blue_enemy, self.orange_enemy]
 
     PlayArea:
         id: play_area_id
@@ -61,7 +61,7 @@
             id: orange_beetle
             game: root_game
 
-            speed: self.game.level.cell_size[0] * 1.0 / 40.0
+            speed: self.game.level.cell_size[0] * 1.0 / FPS * self.speed_multiplier
 
         Level:
             id: level_id
@@ -81,6 +81,12 @@
         center_x: root.width / 10
         top: root.top
         text: str(root.score)
+
+    Label:
+        font_size: 70
+        center_x: root.width / 10
+        top: root.top / 10
+        text: str(root.lives)
 
 
 <Cell>
@@ -130,6 +136,7 @@
 
     Target:
         id: red_target
+        size: 100, 100
         color: self.parent.color
 
 
