@@ -169,7 +169,7 @@ class Level(Widget):
             opposite_edge.type = level_cell.CellEdgeType.passage
             edge.type = level_cell.CellEdgeType.passage
         else:
-            raise error.NonExistentCellError("Oh no!")
+            raise error.NonExistentCellError("There is no adjacent cell")
 
     def get_adjacent_cell(self, cell, direction):
         """Return the adjacent Cell in a given direction"""

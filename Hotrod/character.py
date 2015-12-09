@@ -35,6 +35,7 @@ class Character(Widget):
     grid_position = ReferenceListProperty(x_position, y_position)
 
     speed = NumericProperty(0)
+    speed_multiplier = NumericProperty(1)
     color = ObjectProperty((0, 0, 0))
 
     current_direction = ObjectProperty(direction.Direction.right)
@@ -227,7 +228,23 @@ class BlueBeetle(EnemyBeetle):
         self.target.pos = self.game.level.convert_to_window_position(target_position)
         return target_position
 
+class OrangeBeetle(EnemyBeetle):
+    color = ObjectProperty((1, 0.5, 0))
 
+    def get_target_position(self):
+        """Return the target position"""
+        player_position = self.game.player.grid_position
+        distance_from_player = Vector(player_position).distance(self.grid_position)
+
+        if distance_from_player > 4:
+            # Target position is player if the player is more than 4 tiles away
+            target_position = player_position
+        else:
+            # Target position is bottom left corner if player is within 4 tiles
+            target_position = -1, -1
+        # For testing purposes
+        self.target.pos = self.game.level.convert_to_window_position(target_position)
+        return target_position
 
 class PlayerBeetle(Character):
     """Class for the player character. All methods used are in Character."""

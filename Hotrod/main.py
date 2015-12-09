@@ -1,5 +1,3 @@
-__author__ = 'Harriet'
-
 import random
 import sys
 
@@ -14,6 +12,8 @@ import direction
 import level
 import level_cell
 import character
+
+FPS = 60
 
 # This is a separate widget because I intend to make HotrodGame into a layout
 class PlayArea(Widget):
@@ -35,11 +35,7 @@ class PlayArea(Widget):
         self.game.red_enemy.initialise((self.game.level.columns-1, self.game.level.rows - 1))
         self.game.pink_enemy.initialise((0, self.game.level.rows-1))
         self.game.blue_enemy.initialise((self.game.level.columns-1, 0))
-
-    def update(self):
-        for character in self.game.characters:
-            character.move()
-        self.game.level.check_pellet_collisions()
+        self.game.orange_enemy.initialise((5, 5))
 
 
 class HotrodGame(Widget):
@@ -52,7 +48,6 @@ class HotrodGame(Widget):
     level = ObjectProperty(None)
 
     player = ObjectProperty(None)
-    red_enemy = ObjectProperty(None)
 
     characters = ListProperty()
     score = NumericProperty(0)
@@ -61,7 +56,9 @@ class HotrodGame(Widget):
         self.play_area.start_game()
 
     def update(self, dt):
-        self.play_area.update()
+        for character in self.characters:
+            character.move()
+        self.level.check_pellet_collisions()
 
     def on_touch_up(self, touch):
         # Move right if player swipes right
@@ -86,7 +83,7 @@ class HotrodApp(App):
     def build(self):
         Config.set('graphics', 'fullscreen', 'auto')
         self.game = HotrodGame()
-        Clock.schedule_interval(self.game.update, 1.0/60.0)
+        Clock.schedule_interval(self.game.update, 1.0/FPS)
         return self.game
 
     def on_start(self):
