@@ -84,19 +84,28 @@ class Level(Widget):
         Arguments:
         (x, y) -- window position coordinates tuple
         """
-        grid_x = int((x - self.padding) / self.cell_size[0])
+        grid_x = int((x - self.game.play_area.x) / self.cell_size[0])
         grid_y = int(y / self.cell_size[1])
         return grid_x, grid_y
 
+    # def convert_to_window_position(self, (x, y)):
+    #     """Convert grid position coordinates to window coordinates
+    #     Arguments:
+    #     (x, y) -- grid position coordinates tuple
+    #     """
+    #     window_x = self.cell_size[0] * x + self.padding
+    #     window_y = self.cell_size[1] * y
+    #     return window_x, window_y
+
     def convert_to_window_position(self, (x, y)):
         """Convert grid position coordinates to window coordinates
-
         Arguments:
         (x, y) -- grid position coordinates tuple
         """
-        window_x = self.cell_size[0] * x + self.padding
+        window_x = self.cell_size[0] * x + self.game.play_area.x
         window_y = self.cell_size[1] * y
         return window_x, window_y
+
 
     def __clear_level(self):
         self.clear_widgets()

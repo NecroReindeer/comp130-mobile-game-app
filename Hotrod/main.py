@@ -10,6 +10,7 @@ from kivy.properties import ListProperty
 from kivy.vector import Vector
 from kivy.clock import Clock
 from kivy.config import Config
+from kivy.uix.floatlayout import FloatLayout
 
 import direction
 import level
@@ -26,7 +27,9 @@ class PlayArea(Widget):
     """Widget for the gameplay area. Gameplay objects are children of this widget."""
 
     def start_game(self):
+        print self.pos
         self.generate_level()
+        print self.game.level.cells[0][0].pos
         self.initialise_characters()
 
     def generate_level(self):
@@ -45,7 +48,7 @@ class PlayArea(Widget):
         self.game.orange_enemy.initialise((5, 5))
 
 
-class HotrodGame(Widget):
+class HotrodGame(FloatLayout):
     """Widget for controlling the game and application. Widgets can access
     each other through this widget.
     This widget has access to each main gameplay widget, general
@@ -107,7 +110,7 @@ class HotrodApp(App):
     game = ObjectProperty(None)
 
     def build(self):
-        Config.set('graphics', 'fullscreen', 'auto')
+      #  Config.set('graphics', 'fullscreen', 'auto')
         self.game = HotrodGame()
         return self.game
 

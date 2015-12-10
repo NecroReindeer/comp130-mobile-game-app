@@ -27,10 +27,8 @@
         id: play_area_id
         game: root_game
 
-        padding: (self.parent.width - self.parent.height) / 2
-
-        size: self.parent.height, self.parent.height
-        pos: (self.padding, 0)
+        size_hint: 0.5, 1
+        pos_hint: {'center_x': 0.5}
 
         PlayerBeetle:
             id: player_beetle_id
@@ -68,9 +66,7 @@
             game: root_game
 
             size: self.parent.height, self.parent.width
-            pos: (self.padding, 0)
-
-            padding: self.parent.padding
+            pos: self.parent.pos
 
             cell_size: (self.height/self.rows, self.height/self.rows)
             # Initialise 2-dimensional list of correct size
