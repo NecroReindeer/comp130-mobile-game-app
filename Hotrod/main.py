@@ -18,6 +18,9 @@ import character
 
 FPS = 60
 
+INITIAL_LIVES = 3
+INITIAL_SCORE = 0
+
 # This is a separate widget because I intend to make HotrodGame into a layout
 class PlayArea(Widget):
     """Widget for the gameplay area. Gameplay objects are children of this widget."""
@@ -29,6 +32,7 @@ class PlayArea(Widget):
     def generate_level(self):
         seed = random.randint(0, sys.maxint)
     #   seed = 188100911
+      #  seed = 2122483418
         print seed
         random.seed(seed)
         self.game.level.generate_level()
@@ -54,8 +58,8 @@ class HotrodGame(Widget):
     player = ObjectProperty(None)
 
     enemies = ListProperty()
-    score = NumericProperty(0)
-    lives = NumericProperty(3)
+    score = NumericProperty(INITIAL_SCORE)
+    lives = NumericProperty(INITIAL_LIVES)
 
     def start(self):
         self.play_area.start_game()
@@ -85,13 +89,16 @@ class HotrodGame(Widget):
             self.player.next_direction = direction.Direction.down
 
     def on_lives(self, instance, value):
+        """Kivy event called when number of lives changes"""
         self.play_area.initialise_characters()
         if self.lives <= 0:
             self.reset()
+            Clock.unschedule(self.update)
+            self.start()
 
     def reset(self):
-        self.score = 0
-        self.lives = 3
+        self.score = INITIAL_SCORE
+        self.lives = INITIAL_LIVES
 
 
 class HotrodApp(App):

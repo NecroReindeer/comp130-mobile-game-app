@@ -41,15 +41,19 @@ class Level(Widget):
     pellets = ListProperty()
 
 
+
     def generate_level(self):
         """Generate a maze level using the Growing Tree Algorithm
         http://weblog.jamisbuck.org/2011/1/27/maze-generation-growing-tree-algorithm
         """
+        # Ensure generation starts from an empty level
+        self.__clear_level()
         # List of active cells used in generation algorithm
         active_cells = []
         first_cell_coordinates = self.__get_random_coordinates()
         # Pick the first cell to begin generation from randomly
         active_cells.append(self.__create_cell(first_cell_coordinates))
+
         while len(active_cells) > 0:
             self.__generate_cells(active_cells)
         self.__remove_dead_ends()
@@ -93,6 +97,10 @@ class Level(Widget):
         window_x = self.cell_size[0] * x + self.padding
         window_y = self.cell_size[1] * y
         return window_x, window_y
+
+    def __clear_level(self):
+        self.clear_widgets()
+        self.cells = [[None for i in range(self.rows)] for i in range(self.columns)]
 
     def __generate_cells(self, active_cells):
         """Generate the maze

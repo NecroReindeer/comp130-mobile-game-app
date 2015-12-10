@@ -271,11 +271,8 @@ class PlayerBeetle(Character):
         resets player status to alive."""
         if self.dead:
              self.game.lives -= 1
-             print "I died"
              self.dead = False
-
         else:
-            print "I'm alive"
             pass
 
 
