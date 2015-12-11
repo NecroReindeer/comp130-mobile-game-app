@@ -27,7 +27,9 @@ class Character(Widget):
     Public methods:
     move() -- move the character. Should be called every frame.
     initialise(start_position) -- set up the size and position of the character
+    update_character() -- ensure that the size and position is correct
     """
+    # Give characters access to other widgets through game widget
     game = ObjectProperty(None)
 
     # All characters have the following properties
@@ -59,6 +61,13 @@ class Character(Widget):
         # Set size to interior cell size
         self.size = starting_cell.interior
         self.center = starting_cell.center
+
+    def update_character(self):
+        """Update the character's size and position relative to the level"""
+        # So that size and position is correct if window size changes
+        current_cell = self.game.level.get_cell(self.grid_position)
+        self.center = current_cell.center
+        self.size = current_cell.interior
 
     def _check_position(self):
         """Move the player to the center of the current cell if it
@@ -126,6 +135,28 @@ class Character(Widget):
         self.grid_position = grid_position
 
 
+class PlayerBeetle(Character):
+    """Class for the player character. All methods used are in Character."""
+    color = ObjectProperty((1, 1, 0))
+    dead = BooleanProperty(False)
+
+    def on_grid_position(self, instance, value):
+        """Kivy event called when grid position changes. Check if player has
+        collided with an enemy on player position change"""
+        for enemy in self.game.enemies:
+            if enemy.grid_position == self.grid_position:
+                self.dead = True
+
+    def on_dead(self, instance, value):
+        """Kivy event called when player is set to dead. Take off a life and
+        resets player status to alive."""
+        if self.dead:
+             self.game.lives -= 1
+             self.dead = False
+        else:
+            pass
+
+
 class EnemyBeetle(Character):
     """Class for enemy characters."""
     def _set_next_direction(self):
@@ -190,8 +221,8 @@ class EnemyBeetle(Character):
     def on_grid_position(self, instance, value):
         """Kivy event called when grid position changes. Check if enemy has
         collided with player on enemy position change"""
-        if self.game.player.grid_position == self.grid_position and self.game.game_in_progress:
-                self.game.player.dead = True
+        if self.game.player.grid_position == self.grid_position:
+            self.game.player.dead = True
 
 
 class RedBeetle(EnemyBeetle):
@@ -254,26 +285,7 @@ class OrangeBeetle(EnemyBeetle):
         return target_position
 
 
-class PlayerBeetle(Character):
-    """Class for the player character. All methods used are in Character."""
-    color = ObjectProperty((1, 1, 0))
-    dead = BooleanProperty(False)
 
-    def on_grid_position(self, instance, value):
-        """Kivy event called when grid position changes. Check if player has
-        collided with an enemy on player position change"""
-        for enemy in self.game.enemies:
-            if enemy.grid_position == self.grid_position and self.game.game_in_progress:
-                self.dead = True
-
-    def on_dead(self, instance, value):
-        """Kivy event called when player is set to dead. Take off a life and
-        resets player status to alive."""
-        if self.dead:
-             self.game.lives -= 1
-             self.dead = False
-        else:
-            pass
 
 
 

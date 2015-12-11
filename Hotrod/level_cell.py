@@ -78,6 +78,19 @@ class Cell(Widget):
                 walls.append(edge)
         return walls
 
+    def update_cell(self):
+        self.size = self.parent.cell_size
+        self.pos = self.parent.convert_to_window_position((self.coordinates_x, self.coordinates_y))
+        for edge in self.edges:
+            edge.height = self.height + (2 * self.height * self.wall_thickness)
+            edge.width = self.width * self.wall_thickness
+            edge.pos = (self.pos[0], self.pos[1] - self.height * self.wall_thickness)
+            edge.set_edge()
+            if self.coordinates == (0,0):
+                print "edgy coords", edge.pos
+
+
+
 
 class CellEdge(Widget):
     type = ObjectProperty(None)
@@ -87,6 +100,7 @@ class CellEdge(Widget):
         """Check if the edge should be a wall or a passage and add
         appropriate widget
         """
+        self.clear_widgets()
         if self.type == CellEdgeType.wall:
             wall = Wall()
             wall.size = self.size
@@ -96,7 +110,6 @@ class CellEdge(Widget):
             self.add_widget(wall)
         elif self.type == CellEdgeType.passage:
             pass
-
 
 class Wall(Widget):
     angle = NumericProperty(0)

@@ -10,12 +10,13 @@ from kivy.properties import ListProperty
 from kivy.vector import Vector
 from kivy.clock import Clock
 from kivy.config import Config
-from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.button import Button
 
 import direction
 import level
 import level_cell
 import character
+import user_interface
 
 FPS = 60
 
@@ -27,9 +28,7 @@ class PlayArea(Widget):
     """Widget for the gameplay area. Gameplay objects are children of this widget."""
 
     def start_game(self):
-        print self.pos
         self.generate_level()
-        print self.game.level.cells[0][0].pos
         self.initialise_characters()
 
     def generate_level(self):
@@ -47,14 +46,27 @@ class PlayArea(Widget):
         self.game.blue_enemy.initialise((self.game.level.columns-1, 0))
         self.game.orange_enemy.initialise((5, 5))
 
+    def update_play_area(self, instance, value):
+        """Kivy event triggered when level size changes to ensure that all
+        elements of the play area are positioned and sized correctly"""
+        for column in self.game.level.cells:
+            for cell in column:
+                cell.update_cell()
 
-class HotrodGame(FloatLayout):
+        for pellet in self.game.level.pellets:
+            pellet.update_pellet()
+
+        for enemy in self.game.enemies:
+            enemy.update_character()
+        self.game.player.update_character()
+
+
+class HotrodGame(Widget):
     """Widget for controlling the game and application. Widgets can access
     each other through this widget.
     This widget has access to each main gameplay widget, general
     properties such as scores, and settings that affect the game.
     """
-    game_in_progress = BooleanProperty(False)
     play_area = ObjectProperty(None)
     level = ObjectProperty(None)
 
@@ -64,11 +76,13 @@ class HotrodGame(FloatLayout):
     score = NumericProperty(INITIAL_SCORE)
     lives = NumericProperty(INITIAL_LIVES)
 
+    # GUI elements so that they can be referred to in
+    # multiple methods
+    game_over_screen = ObjectProperty(None)
+
     def start(self):
         self.play_area.start_game()
         Clock.schedule_interval(self.update, 1.0/FPS)
-        self.game_in_progress = True
-
 
     def update(self, dt):
         self.player.move()
@@ -95,13 +109,24 @@ class HotrodGame(FloatLayout):
         """Kivy event called when number of lives changes"""
         self.play_area.initialise_characters()
         if self.lives <= 0:
-            self.reset()
             Clock.unschedule(self.update)
-            self.start()
+            self.show_game_over_screen()
+            # Stop the game
 
-    def reset(self):
+    def show_game_over_screen(self):
+        self.game_over_screen = user_interface.GameOverScreen()
+        self.game_over_screen.size = self.size
+        self.game_over_screen.center = self.center
+        self.add_widget(self.game_over_screen)
+        self.game_over_screen.reset_button.bind(on_press=self.reset)
+        self.bind(size=self.game_over_screen.set_size)
+
+    def reset(self, event):
+        self.remove_widget(self.game_over_screen)
+        self.unbind(size=self.game_over_screen.set_size)
         self.score = INITIAL_SCORE
         self.lives = INITIAL_LIVES
+        self.start()
 
 
 class HotrodApp(App):
@@ -110,7 +135,7 @@ class HotrodApp(App):
     game = ObjectProperty(None)
 
     def build(self):
-      #  Config.set('graphics', 'fullscreen', 'auto')
+     #   Config.set('graphics', 'fullscreen', 'auto')
         self.game = HotrodGame()
         return self.game
 

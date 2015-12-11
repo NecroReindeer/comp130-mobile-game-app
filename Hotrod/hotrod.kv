@@ -12,6 +12,8 @@
     #So that widgets can access in python code
     id: root_game
 
+    heads_up_display: hud
+
     play_area: play_area_id
     level: level_id
 
@@ -23,42 +25,56 @@
 
     enemies: [self.red_enemy, self.pink_enemy, self.blue_enemy, self.orange_enemy]
 
+    padding: (self.width - self.height) / 2
+
     PlayArea:
         id: play_area_id
         game: root_game
 
-        size_hint: 0.5, 1
-        pos_hint: {'center_x': 0.5}
+        padding: (self.parent.width - self.parent.height) / 2
+
+        size: self.parent.height, self.parent.height
+        pos: (self.padding, 0)
 
         PlayerBeetle:
             id: player_beetle_id
             game: root_game
 
-            # Takes 40 frames to traverse a cell
+            x_position: 0
+            y_position: 0
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.speed_multiplier
 
         RedBeetle:
+
             id: red_beetle
             game: root_game
 
+            x_position: self.game.level.columns-1
+            y_position: self.game.level.rows - 1
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.speed_multiplier
 
         PinkBeetle:
             id: pink_beetle
             game: root_game
 
+            x_position: 0
+            y_position: self.game.level.rows-1
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.speed_multiplier
 
         BlueBeetle:
             id: blue_beetle
             game: root_game
 
+            x_position: self.game.level.columns-1
+            y_position: 0
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.speed_multiplier
 
         OrangeBeetle:
             id: orange_beetle
             game: root_game
 
+            x_position: 5
+            y_position: 5
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.speed_multiplier
 
         Level:
@@ -66,23 +82,48 @@
             game: root_game
 
             size: self.parent.height, self.parent.width
-            pos: self.parent.pos
+            pos: (self.padding, 0)
+
+            padding: self.parent.padding
 
             cell_size: (self.height/self.rows, self.height/self.rows)
             # Initialise 2-dimensional list of correct size
             cells: [[None for i in range(self.rows)] for i in range(self.columns)]
 
-    Label:
-        font_size: 70
-        center_x: root.width / 10
-        top: root.top
-        text: str(root.score)
+    HeadsUpDisplay:
+        id: hud
+        game: root_game
 
-    Label:
-        font_size: 70
-        center_x: root.width / 10
-        top: root.top / 10
-        text: str(root.lives)
+        size: self.game.size
+
+        score_label: score
+        lives_label: lives
+
+        FloatLayout:
+
+            Label:
+                id: lives
+                game: root_game
+                pos_hint: {'x': 0.93, 'top': 0.95}
+                size_hint_x: None
+                size_hint_y: None
+
+                width: self.game.padding / 2
+                text_size: self.width, None
+
+                text: "Lives: " + str(self.game.lives)
+
+            Label:
+                id: score
+                game: root_game
+                pos_hint: {'x': 0.015, 'top': 0.95}
+                size_hint_x: None
+                size_hint_y: None
+
+                width: self.game.padding / 2
+                text_size: self.width, None
+
+                text: "Score: " + str(self.game.score)
 
 
 <Cell>
@@ -94,6 +135,7 @@
     # Size of cell within the walls
     interior: (self.width - self.width * self.wall_thickness * 2, self.height - self.height * self.wall_thickness * 2)
     edges: [self.left_edge, self.bottom_edge, self.right_edge, self.top_edge]
+
 
     CellEdge:
         id: left_edge_id
@@ -132,7 +174,7 @@
 
     Target:
         id: red_target
-        size: 100, 100
+        size: self.parent.size
         color: self.parent.color
 
 
@@ -147,6 +189,7 @@
 
     Target:
         id: pink_target
+        size: self.parent.size
         color: self.parent.color
 
 
@@ -161,6 +204,7 @@
 
     Target:
         id: blue_target
+        size: self.parent.size
         color: self.parent.color
 
 <OrangeBeetle>
@@ -174,6 +218,7 @@
 
     Target:
         id: orange_target
+        size: self.parent.size
         color: self.parent.color
 
 <CellEdge>
@@ -184,6 +229,7 @@
 
 <Wall>
     canvas:
+
         Color:
             rgb: (0, 0, 0.5)
         PushMatrix
@@ -212,3 +258,40 @@
         Ellipse:
             pos: self.pos
             size: self.size
+
+
+<GameOverScreen>
+    reset_button: reset
+    game_over_text: game_over_text
+
+    FloatLayout:
+        orientation: "vertical"
+        canvas:
+            Color:
+                rgba: 0, 0, 0, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        Label:
+            id: game_over_text
+            size_hint: (0.5, 0.5)
+            pos_hint: {'center_x': 0.5, 'top': 0.9}
+
+            font_size: self.height / 2
+            color: (0.9, 0.9, 0, 1)
+            text: "Game over!"
+
+        Button:
+            id: reset
+            size_hint: (0.25, 0.2)
+            pos_hint: {'center_x': 0.5, 'center_y': 0.3}
+            background_normal: ''
+            background_color: (0.9, 0, 0, 1)
+
+            font_size: self.height / 2
+            color: (0, 0, 0, 1)
+            text: "Restart"
+
+
+

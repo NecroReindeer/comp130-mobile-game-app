@@ -40,8 +40,6 @@ class Level(Widget):
 
     pellets = ListProperty()
 
-
-
     def generate_level(self):
         """Generate a maze level using the Growing Tree Algorithm
         http://weblog.jamisbuck.org/2011/1/27/maze-generation-growing-tree-algorithm
@@ -84,32 +82,24 @@ class Level(Widget):
         Arguments:
         (x, y) -- window position coordinates tuple
         """
-        grid_x = int((x - self.game.play_area.x) / self.cell_size[0])
+        grid_x = int((x - self.padding) / self.cell_size[0])
         grid_y = int(y / self.cell_size[1])
         return grid_x, grid_y
 
-    # def convert_to_window_position(self, (x, y)):
-    #     """Convert grid position coordinates to window coordinates
-    #     Arguments:
-    #     (x, y) -- grid position coordinates tuple
-    #     """
-    #     window_x = self.cell_size[0] * x + self.padding
-    #     window_y = self.cell_size[1] * y
-    #     return window_x, window_y
-
     def convert_to_window_position(self, (x, y)):
         """Convert grid position coordinates to window coordinates
+
         Arguments:
         (x, y) -- grid position coordinates tuple
         """
-        window_x = self.cell_size[0] * x + self.game.play_area.x
+        window_x = self.cell_size[0] * x + self.padding
         window_y = self.cell_size[1] * y
         return window_x, window_y
-
 
     def __clear_level(self):
         self.clear_widgets()
         self.cells = [[None for i in range(self.rows)] for i in range(self.columns)]
+        self.pellets = []
 
     def __generate_cells(self, active_cells):
         """Generate the maze
@@ -200,6 +190,8 @@ class Level(Widget):
     def __create_cell(self, (x, y)):
         """Create a Cell at provided grid coordinates"""
         cell = level_cell.Cell()
+        # Bind here so that cells are created before event can be triggered
+        self.bind(size=self.game.play_area.update_play_area, pos=self.game.play_area.update_play_area)
         cell.size = self.cell_size
         cell.pos = self.convert_to_window_position((x, y))
         cell.coordinates = x, y
