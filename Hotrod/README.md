@@ -4,7 +4,7 @@ The application can be run from main.py.
 
 ##Additional Libraries/Modules/Frameworks Used:
 [Kivy](http://kivy.org/)  
-[Enum34](https://pypi.python.org/pypi/enum34)
+[enum34](https://pypi.python.org/pypi/enum34)
 
 ##Application-Specific Modules
 ###character
