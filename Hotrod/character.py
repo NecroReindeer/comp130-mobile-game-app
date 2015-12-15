@@ -6,6 +6,8 @@ EnemyBeetle(Character) -- class that all enemies inherit from
 PlayerBeetle(Character) -- class for the player beetle
 RedBeetle(EnemyBeetle) -- class for the red beetle enemy
 PinkBeetle(EnemyBeetle) -- class for the pink beetle enemy
+BlueBeetle(EnemyBeetle) -- class for the blue beetle enemy
+OrangeBeetle(EnemyBeetle) -- class for the orange beetle enemy
 """
 
 import random
@@ -16,6 +18,7 @@ from kivy.properties import NumericProperty
 from kivy.properties import ReferenceListProperty
 from kivy.properties import BooleanProperty
 from kivy.vector import Vector
+from kivy.clock import Clock
 
 import direction
 import level_cell
@@ -158,7 +161,16 @@ class PlayerBeetle(Character):
 
 
 class EnemyBeetle(Character):
-    """Class for enemy characters."""
+    """Class for enemy characters.
+
+    Kivy Properties:
+    pursuing -- bool that indicates which mode the enemy is in
+    mode_change_timer -- the number of seconds the next mode change will
+                         scheduled for
+    """
+    pursuing = BooleanProperty(True)
+    mode_change_timer = NumericProperty(10)
+
     def _set_next_direction(self):
         """Set the next direction"""
         self.target_position = self.get_target_position()
@@ -167,11 +179,12 @@ class EnemyBeetle(Character):
         self.next_direction = best_move
 
     def __get_possible_moves(self, current_direction):
-        """Return the directions the enemy is allowed to move in
+        """Return the a list of directions the enemy is allowed to move in.
 
         Arguments:
         current_direction -- current direction of travel travelling in as direction.Direction
         """
+        # List in this order means priority is up-left-down-right when using directions.pop
         directions = [direction.Direction.right,
                       direction.Direction.down,
                       direction.Direction.left,
@@ -182,25 +195,25 @@ class EnemyBeetle(Character):
     def __get_shortest_move(self, possible_moves):
         """Return the direction that results in being in the cell nearest the
         target cell as direction.Direction.
-        Choose randomly if cells are an equal distance from the target.
 
         Arguments:
         possible_moves -- list of directions the enemy is allowed to travel in
         """
         current_cell = self.game.level.get_cell(self.grid_position)
+        best_moves = []
         shortest_distance = None
-        best_move = None
         for move in possible_moves:
             adjacent_cell = self.game.level.get_adjacent_cell(current_cell, move)
             adjacent_cell_coordinates = adjacent_cell.coordinates
             distance = Vector(adjacent_cell_coordinates).distance(self.target_position)
-            if distance < shortest_distance or shortest_distance == None:
+
+            if distance <= shortest_distance or shortest_distance == None:
+                # This ensures that distances are added in both distance order and
+                # priority order (since possible_moves is in priority order)
                 shortest_distance = distance
-                best_move = move
-            elif distance == shortest_distance:
-                # Choose randomly if both are equal distance
-                best_move = random.choice((move, best_move))
-        return best_move
+                best_moves.append(move)
+        # Return the shortest move that is the highest priority in up-left-down-right
+        return best_moves.pop()
 
     def __direction_is_allowed(self, direction):
         """Return true if the enemy is allowed to travel in the given direction,
@@ -218,6 +231,18 @@ class EnemyBeetle(Character):
         else:
             return True
 
+    def change_mode(self, dt):
+        """Switch the mode between scatter and chase mode and reverse direction"""
+        self.pursuing = not self.pursuing
+        self.current_direction = self.current_direction.get_opposite()
+
+        if self.pursuing:
+            self.mode_change_timer = 20
+            Clock.schedule_once(self.change_mode, self.mode_change_timer)
+        else:
+            self.mode_change_timer = 5
+            Clock.schedule_once(self.change_mode, self.mode_change_timer)
+
     def on_grid_position(self, instance, value):
         """Kivy event called when grid position changes. Check if enemy has
         collided with player on enemy position change"""
@@ -229,60 +254,85 @@ class RedBeetle(EnemyBeetle):
     color = ObjectProperty((1, 0, 0))
 
     def get_target_position(self):
-        """Return the target position"""
-        # For testing purposes
-        self.target.pos = self.game.level.convert_to_window_position(self.game.player.grid_position)
-        # Target position is always player's position
-        return self.game.player.grid_position
+        """Determine and return the target position"""
+        if self.pursuing:
+            # For testing purposes
+            self.target.pos = self.game.level.convert_to_window_position(self.game.player.grid_position)
+            # Target position is always player's position
+            return self.game.player.grid_position
+        else:
+            # Upper right corner
+            target_position = (self.game.level.columns + 1, self.game.level.rows + 1)
+            self.target.pos = self.game.level.convert_to_window_position(target_position)
+            return target_position
 
 
 class PinkBeetle(EnemyBeetle):
     color = ObjectProperty((1, 0, 1))
 
     def get_target_position(self):
-        """Return the target position"""
-        player_position = self.game.player.grid_position
-        player_direction_vector = self.game.player.current_direction.value
-        # Target position is the 2 cells ahead of the player
-        target_position = Vector(player_position) + 2 * player_direction_vector
-        # For testing purposes
-        self.target.pos = self.game.level.convert_to_window_position(target_position)
-        return target_position
+        """Determine and return the target position"""
+        if self.pursuing:
+            player_position = self.game.player.grid_position
+            player_direction_vector = self.game.player.current_direction.value
+            # Target position is the 2 cells ahead of the player
+            target_position = Vector(player_position) + 2 * player_direction_vector
+            # For testing purposes
+            self.target.pos = self.game.level.convert_to_window_position(target_position)
+            return target_position
+        else:
+            # Upper left corner
+            target_position = (-1, self.game.level.rows + 1)
+            self.target.pos = self.game.level.convert_to_window_position(target_position)
+            return target_position
 
 class BlueBeetle(EnemyBeetle):
     color = ObjectProperty((0, 1, 1))
 
     def get_target_position(self):
-        player_position = self.game.player.grid_position
-        player_direction_vector = self.game.player.current_direction.value
-        space_ahead_of_player = Vector(player_position) + 2 * player_direction_vector
-        red_beetle_position = self.game.red_enemy.grid_position
+        """Determine and return the target position"""
+        if self.pursuing:
+            player_position = self.game.player.grid_position
+            player_direction_vector = self.game.player.current_direction.value
+            space_ahead_of_player = Vector(player_position) + 2 * player_direction_vector
+            red_beetle_position = self.game.red_enemy.grid_position
 
-        # Target position is double the vector between 2 spaces ahead of the
-        # player and the red beetle
-        target_position = 2 * Vector(space_ahead_of_player) - Vector(red_beetle_position)
-        # For testing purposes
-        self.target.pos = self.game.level.convert_to_window_position(target_position)
-        return target_position
+            # Target position is double the vector between 2 spaces ahead of the
+            # player and the red beetle
+            target_position = 2 * Vector(space_ahead_of_player) - Vector(red_beetle_position)
+            # For testing purposes
+            self.target.pos = self.game.level.convert_to_window_position(target_position)
+            return target_position
+        else:
+            # Bottom right
+            target_position = (self.game.level.columns + 1, -1)
+            self.target.pos = self.game.level.convert_to_window_position(target_position)
+            return target_position
 
 
 class OrangeBeetle(EnemyBeetle):
     color = ObjectProperty((1, 0.5, 0))
 
     def get_target_position(self):
-        """Return the target position"""
-        player_position = self.game.player.grid_position
-        distance_from_player = Vector(player_position).distance(self.grid_position)
+        """Determine and return the target position"""
+        if self.pursuing:
+            player_position = self.game.player.grid_position
+            distance_from_player = Vector(player_position).distance(self.grid_position)
 
-        if distance_from_player > 4:
-            # Target position is player if the player is more than 4 tiles away
-            target_position = player_position
+            if distance_from_player > 4:
+                # Target position is player if the player is more than 4 tiles away
+                target_position = player_position
+            else:
+                # Target position is bottom left corner if player is within 4 tiles
+                target_position = -1, -1
+            # For testing purposes
+            self.target.pos = self.game.level.convert_to_window_position(target_position)
+            return target_position
         else:
-            # Target position is bottom left corner if player is within 4 tiles
-            target_position = -1, -1
-        # For testing purposes
-        self.target.pos = self.game.level.convert_to_window_position(target_position)
-        return target_position
+            # Bottom left
+            target_position = (-1, -1)
+            self.target.pos = self.game.level.convert_to_window_position(target_position)
+            return target_position
 
 
 

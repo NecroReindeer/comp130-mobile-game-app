@@ -33,8 +33,6 @@ class PlayArea(Widget):
 
     def generate_level(self):
         seed = random.randint(0, sys.maxint)
-    #   seed = 188100911
-      #  seed = 2122483418
         print seed
         random.seed(seed)
         self.game.level.generate_level()
@@ -45,6 +43,9 @@ class PlayArea(Widget):
         self.game.pink_enemy.initialise((0, self.game.level.rows-1))
         self.game.blue_enemy.initialise((self.game.level.columns-1, 0))
         self.game.orange_enemy.initialise((5, 5))
+
+        for enemy in self.game.enemies:
+            Clock.schedule_once(enemy.change_mode, enemy.mode_change_timer)
 
     def update_play_area(self, instance, value):
         """Kivy event triggered when level size changes to ensure that all
