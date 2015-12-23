@@ -10,8 +10,6 @@ BlueBeetle(EnemyBeetle) -- class for the blue beetle enemy
 OrangeBeetle(EnemyBeetle) -- class for the orange beetle enemy
 """
 
-import random
-
 from kivy.uix.widget import Widget
 from kivy.properties import ObjectProperty
 from kivy.properties import NumericProperty
@@ -237,7 +235,7 @@ class EnemyBeetle(Character):
         self.current_direction = self.current_direction.get_opposite()
 
         if self.pursuing:
-            self.mode_change_timer = 20
+            self.mode_change_timer = 10
             Clock.schedule_once(self.change_mode, self.mode_change_timer)
         else:
             self.mode_change_timer = 5

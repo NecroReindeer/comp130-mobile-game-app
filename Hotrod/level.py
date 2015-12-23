@@ -21,7 +21,8 @@ class Level(Widget):
     Public methods:
     generate_level() -- start level generation process
     check_pellet_collsions() -- check if player has collided with any pellets
-    get_cell((x, y)) -- returns the cell at the given grid coordinates
+    get_cell((x, y)) -- return the cell at the given grid coordinates
+    get_adjacent_cell(cell, direction) -- return the adjacent cell in a given direction
     convert_to_grid_position((x, y)) -- convert window coordinates to grid coordinates
     convert_to_window_position((x, y)) -- convert grid coordinates to window coordinates
 
@@ -39,6 +40,7 @@ class Level(Widget):
     cell_size = ObjectProperty()
 
     pellets = ListProperty()
+    beetle_house = {}
 
     def generate_level(self):
         """Generate a maze level using the Growing Tree Algorithm
@@ -54,7 +56,9 @@ class Level(Widget):
 
         while len(active_cells) > 0:
             self.__generate_cells(active_cells)
+
         self.__remove_dead_ends()
+        self.__create_den()
         self.__add_cells()
         self.__add_pellets()
 
@@ -75,6 +79,15 @@ class Level(Widget):
         (x, y) -- grid coordinate tuple
         """
         return self.cells[x][y]
+
+    def get_adjacent_cell(self, cell, direction):
+        """Return the adjacent Cell in a given direction"""
+        adjacent_cell_coords = Vector(*cell.coordinates) + Vector(*direction.value)
+        if self.__contains_coordinates(adjacent_cell_coords):
+            adjacent_cell = self.get_cell(adjacent_cell_coords)
+            return adjacent_cell
+        else:
+            return None
 
     def convert_to_grid_position(self, (x, y)):
         """Convert window position coordinates to the game's grid coordinates
@@ -178,14 +191,70 @@ class Level(Widget):
         else:
             raise error.NonExistentCellError("There is no adjacent cell")
 
-    def get_adjacent_cell(self, cell, direction):
-        """Return the adjacent Cell in a given direction"""
-        adjacent_cell_coords = Vector(*cell.coordinates) + Vector(*direction.value)
-        if self.__contains_coordinates(adjacent_cell_coords):
-            adjacent_cell = self.get_cell(adjacent_cell_coords)
-            return adjacent_cell
+    def __set_edge_to_wall(self, cell, edge):
+        """Change a cell edge type to a passage. Also set corresponding
+        edge in adjacent cell to a passage"""
+        edge_direction = edge.direction
+        adjacent_cell = self.get_adjacent_cell(cell, edge_direction)
+        if adjacent_cell != None:
+            opposite_edge = adjacent_cell.get_edge(edge_direction.get_opposite())
+            opposite_edge.type = level_cell.CellEdgeType.wall
+            edge.type = level_cell.CellEdgeType.wall
         else:
-            return None
+            edge.type = level_cell.CellEdgeType.wall
+
+    def __set_cell_edges(self, cell, directions):
+        for edge in cell.edges:
+            if edge.direction in directions:
+                self.__set_edge_to_wall(cell, edge)
+            else:
+                self.__set_edge_to_passage(cell, edge)
+
+    def __create_den(self):
+        """Create a den area that enemies will come from"""
+        center_coords = self.__get_den_center()
+
+        center_cell = self.get_cell(center_coords)
+        left_cell = self.get_adjacent_cell(center_cell, direction.Direction.left)
+        right_cell = self.get_adjacent_cell(center_cell, direction.Direction.right)
+
+        self.beetle_house['center'] = center_cell
+        self.beetle_house['left'] = left_cell
+        self.beetle_house['right'] = right_cell
+
+        self.__set_den_edges()
+        self.__remove_walls_around_den()
+
+    def __get_den_center(self):
+        """Choose a random number for the center of the den area"""
+        center_coords = (random.randrange(2, self.columns-1),
+                         random.randrange(2, self.rows-1))
+        return center_coords
+
+    def __set_den_edges(self):
+        self.__set_cell_edges(self.beetle_house['center'], (direction.Direction.down, direction.Direction.up))
+        self.__set_cell_edges(self.beetle_house['left'], (direction.Direction.up, direction.Direction.down, direction.Direction.left))
+        self.__set_cell_edges(self.beetle_house['right'], (direction.Direction.up, direction.Direction.down, direction.Direction.right))
+
+    def __remove_walls_around_den(self):
+        for cell in self.beetle_house.itervalues():
+            for dir in direction.Direction:
+                adjacent_cell = self.get_adjacent_cell(cell, dir)
+
+                if adjacent_cell not in self.beetle_house.itervalues():
+                    if dir == direction.Direction.up or dir == direction.Direction.down:
+                        for edge_dir in direction.Direction.left, direction.Direction.right:
+                            try:
+                                self.__set_edge_to_passage(adjacent_cell, adjacent_cell.get_edge(edge_dir))
+                            except error.NonExistentCellError:
+                                pass
+
+                    if dir == direction.Direction.left or dir == direction.Direction.right:
+                        for edge_dir in direction.Direction.down, direction.Direction.up:
+                            try:
+                                self.__set_edge_to_passage(adjacent_cell, adjacent_cell.get_edge(edge_dir))
+                            except error.NonExistentCellError:
+                                pass
 
     def __create_cell(self, (x, y)):
         """Create a Cell at provided grid coordinates"""

@@ -45,6 +45,8 @@ class PlayArea(Widget):
         self.game.orange_enemy.initialise((5, 5))
 
         for enemy in self.game.enemies:
+            # Ensure that change_mode isn't scheduled twice
+            Clock.unschedule(enemy.change_mode)
             Clock.schedule_once(enemy.change_mode, enemy.mode_change_timer)
 
     def update_play_area(self, instance, value):

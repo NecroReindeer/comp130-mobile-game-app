@@ -89,9 +89,6 @@ class Cell(Widget):
             if self.coordinates == (0,0):
                 print "edgy coords", edge.pos
 
-
-
-
 class CellEdge(Widget):
     type = ObjectProperty(None)
     direction = ObjectProperty(None)

@@ -15,5 +15,4 @@ class HeadsUpDisplay(FloatLayout):
     def set_size(self, instance, value):
         self.size = self.parent.size
         self.center = self.parent.center
-
         self.score_label.text_size = self.width, None
