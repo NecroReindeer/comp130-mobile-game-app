@@ -39,10 +39,10 @@ class PlayArea(Widget):
 
     def initialise_characters(self):
         self.game.player.initialise((0, 0))
-        self.game.red_enemy.initialise((self.game.level.columns-1, self.game.level.rows - 1))
-        self.game.pink_enemy.initialise((0, self.game.level.rows-1))
-        self.game.blue_enemy.initialise((self.game.level.columns-1, 0))
-        self.game.orange_enemy.initialise((5, 5))
+        self.game.red_enemy.initialise(self.game.level.beetle_house['center'].coordinates)
+        self.game.pink_enemy.initialise(self.game.level.beetle_house['center'].coordinates)
+        self.game.blue_enemy.initialise(self.game.level.beetle_house['right'].coordinates)
+        self.game.orange_enemy.initialise(self.game.level.beetle_house['left'].coordinates)
 
         for enemy in self.game.enemies:
             # Ensure that change_mode isn't scheduled twice

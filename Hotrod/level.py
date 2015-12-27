@@ -115,13 +115,14 @@ class Level(Widget):
         self.pellets = []
 
     def __generate_cells(self, active_cells):
-        """Generate the maze
+        """Procedurally generate a maze.
 
         Arguments:
-        active_cells -- list of active cells. Should contain the first cell.
+        active_cells -- list of active cells. It should contain the first cell as level_cell.Cell.
         """
+
         # Determines which index the algorithm generates from.
-        # Changing this yields different results
+        # Changing this yields different results.
         current_index = len(active_cells) - 1
         current_cell = active_cells[current_index]
 
@@ -164,51 +165,70 @@ class Level(Widget):
                 self.add_widget(pellet)
 
     def __remove_dead_ends(self):
-        """Ensure that there are no one-cell dead ends"""
+        """Ensure that there are no single-cell dead ends"""
         for column in self.cells:
             for cell in column:
                 walls = cell.get_walls()
                 if len(walls) >= 3:
                     target_edge = random.choice(walls)
                     while True:
-                        # If the wall isn't at the edge, remove it
                         try:
-                            self.__set_edge_to_passage(cell, target_edge)
+                            self.__set_edge_to_passage(cell, target_edge.direction)
                             break
                         except error.NonExistentCellError:
+                            # If the wall is at the edge, remove it from the list of walls
                             walls.remove(target_edge)
                             target_edge = random.choice(walls)
 
-    def __set_edge_to_passage(self, cell, edge):
-        """Change a cell edge type to a passage. Also set corresponding
-        edge in adjacent cell to a passage"""
-        edge_direction = edge.direction
-        adjacent_cell = self.get_adjacent_cell(cell, edge_direction)
+    def __set_edge_to_passage(self, cell, direction):
+        """Change a cell edge type of a given cell to a passage and
+        set the corresponding edge in the adjacent cell to a passage.
+
+        Arguments:
+        cell - the level_cell.Cell whose edge will be changed
+        direction - the direction of the edge to be changed as direction.Direction
+        """
+        edge = cell.get_edge(direction)
+        adjacent_cell = self.get_adjacent_cell(cell, direction)
+
         if adjacent_cell != None:
-            opposite_edge = adjacent_cell.get_edge(edge_direction.get_opposite())
+            opposite_edge = adjacent_cell.get_edge(direction.get_opposite())
             opposite_edge.type = level_cell.CellEdgeType.passage
             edge.type = level_cell.CellEdgeType.passage
         else:
-            raise error.NonExistentCellError("There is no adjacent cell")
+            # Cell can only be set to passage if there is an adjacent cell
+            raise error.NonExistentCellError("There is no adjacent cell.")
 
-    def __set_edge_to_wall(self, cell, edge):
-        """Change a cell edge type to a passage. Also set corresponding
-        edge in adjacent cell to a passage"""
-        edge_direction = edge.direction
-        adjacent_cell = self.get_adjacent_cell(cell, edge_direction)
+    def __set_edge_to_wall(self, cell, direction):
+        """Change a cell edge type of a given cell to a wall. Also set
+        the corresponding edge in the adjacent cell to a passage.
+
+        Arguments:
+        cell - the level_cell.Cell whose edge will be changed
+        direction - the direction of the edge to be changed as direction.Direction
+        """
+        edge = cell.get_edge(direction)
+        edge.type = level_cell.CellEdgeType.wall
+        adjacent_cell = self.get_adjacent_cell(cell, direction)
+
+        # Also set relevant edge of adjacent cell if it exists
         if adjacent_cell != None:
-            opposite_edge = adjacent_cell.get_edge(edge_direction.get_opposite())
+            opposite_edge = adjacent_cell.get_edge(direction.get_opposite())
             opposite_edge.type = level_cell.CellEdgeType.wall
-            edge.type = level_cell.CellEdgeType.wall
-        else:
-            edge.type = level_cell.CellEdgeType.wall
 
     def __set_cell_edges(self, cell, directions):
+        """Set the edges of the given cell in the given directions to walls. Set the
+        remaining edges to passages.
+
+        Arguments:
+        cell - the level_cell.Cell whose edges will be changed
+        directions - tuple of direction.Direction specifying where walls should be
+        """
         for edge in cell.edges:
             if edge.direction in directions:
-                self.__set_edge_to_wall(cell, edge)
+                self.__set_edge_to_wall(cell, edge.direction)
             else:
-                self.__set_edge_to_passage(cell, edge)
+                self.__set_edge_to_passage(cell, edge.direction)
 
     def __create_den(self):
         """Create a den area that enemies will come from"""
@@ -227,14 +247,21 @@ class Level(Widget):
 
     def __get_den_center(self):
         """Choose a random number for the center of the den area"""
-        center_coords = (random.randrange(2, self.columns-1),
-                         random.randrange(2, self.rows-1))
-        return center_coords
+        # Range ensures that there is at least one square surrounding the den on all sides
+        den_center_coords = (random.randrange(2, self.columns-3),
+                             random.randrange(1, self.rows-2))
+        return den_center_coords
 
     def __set_den_edges(self):
-        self.__set_cell_edges(self.beetle_house['center'], (direction.Direction.down, direction.Direction.up))
+        den_center = self.beetle_house['center']
+
+        self.__set_cell_edges(den_center, (direction.Direction.down, direction.Direction.up))
         self.__set_cell_edges(self.beetle_house['left'], (direction.Direction.up, direction.Direction.down, direction.Direction.left))
         self.__set_cell_edges(self.beetle_house['right'], (direction.Direction.up, direction.Direction.down, direction.Direction.right))
+
+        # Manually set top edge of den_center in order to create one-way passage
+        den_center.get_edge(direction.Direction.up).type = level_cell.CellEdgeType.passage
+
 
     def __remove_walls_around_den(self):
         for cell in self.beetle_house.itervalues():
@@ -245,14 +272,14 @@ class Level(Widget):
                     if dir == direction.Direction.up or dir == direction.Direction.down:
                         for edge_dir in direction.Direction.left, direction.Direction.right:
                             try:
-                                self.__set_edge_to_passage(adjacent_cell, adjacent_cell.get_edge(edge_dir))
+                                self.__set_edge_to_passage(adjacent_cell, edge_dir)
                             except error.NonExistentCellError:
                                 pass
 
                     if dir == direction.Direction.left or dir == direction.Direction.right:
                         for edge_dir in direction.Direction.down, direction.Direction.up:
                             try:
-                                self.__set_edge_to_passage(adjacent_cell, adjacent_cell.get_edge(edge_dir))
+                                self.__set_edge_to_passage(adjacent_cell, edge_dir)
                             except error.NonExistentCellError:
                                 pass
 
@@ -271,6 +298,7 @@ class Level(Widget):
         """Initialise all cell edges and add all cells as children"""
         for column in self.cells:
              for cell in column:
+                 # Initialise the edges of all cells before adding them as widgets
                  cell.set_edges()
                  # Add widget at index 1 so that PlayerBeetle remains at 0
                  self.add_widget(cell, 1)

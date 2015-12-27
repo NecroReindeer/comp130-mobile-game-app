@@ -106,6 +106,7 @@ class Character(Widget):
                     # Set new direction for next frame if player has moved into/past center or is at the center of cell
                     if ((self.center_x >= current_cell.center_x and current_cell.center_x > previous_x)or
                             (self.center_x == current_cell.center_x and previous_x == current_cell.center_x)):
+                        # Ensure player is in center before changing direction
                         self.center_x = current_cell.center_x
                         self._set_direction()
 
@@ -163,18 +164,23 @@ class EnemyBeetle(Character):
 
     Kivy Properties:
     pursuing -- bool that indicates which mode the enemy is in
-    mode_change_timer -- the number of seconds the next mode change will
-                         scheduled for
+    mode_change_timer -- the number of seconds the next mode change will be scheduled for
     """
     pursuing = BooleanProperty(True)
+    dormant = BooleanProperty(True)
     mode_change_timer = NumericProperty(10)
 
     def _set_next_direction(self):
         """Set the next direction"""
-        self.target_position = self.get_target_position()
-        possible_moves = self.__get_possible_moves(self.current_direction)
-        best_move = self.__get_shortest_move(possible_moves)
-        self.next_direction = best_move
+        if self.dormant:
+            current_cell = self.game.level.get_cell(self.grid_position)
+            if current_cell.get_edge(self.current_direction).type == level_cell.CellEdgeType.wall:
+                self.next_direction = self.current_direction.get_opposite()
+        else:
+            self.target_position = self.get_target_position()
+            possible_moves = self.__get_possible_moves(self.current_direction)
+            best_move = self.__get_shortest_move(possible_moves)
+            self.next_direction = best_move
 
     def __get_possible_moves(self, current_direction):
         """Return the a list of directions the enemy is allowed to move in.
