@@ -30,6 +30,7 @@ class PlayArea(Widget):
     def start_game(self):
         self.generate_level()
         self.initialise_characters()
+        self.start_enemy_timers()
 
     def generate_level(self):
         seed = random.randint(0, sys.maxint)
@@ -39,15 +40,20 @@ class PlayArea(Widget):
 
     def initialise_characters(self):
         self.game.player.initialise((0, 0))
-        self.game.red_enemy.initialise(self.game.level.beetle_house['center'].coordinates)
-        self.game.pink_enemy.initialise(self.game.level.beetle_house['center'].coordinates)
-        self.game.blue_enemy.initialise(self.game.level.beetle_house['right'].coordinates)
-        self.game.orange_enemy.initialise(self.game.level.beetle_house['left'].coordinates)
+        for enemy in self.game.enemies:
+            starting_cell = random.choice(self.game.level.beetle_house.values())
+            enemy.initialise(starting_cell.coordinates)
+            enemy.reset_scatter_timers()
+
+    def start_enemy_timers(self):
+        # for enemy in self.game.enemies:
+        #     # Ensure that change_mode isn't scheduled twice
+        #     Clock.unschedule(enemy.change_mode)
+        #     Clock.schedule_once(enemy.change_mode, enemy.mode_change_timer)
 
         for enemy in self.game.enemies:
-            # Ensure that change_mode isn't scheduled twice
-            Clock.unschedule(enemy.change_mode)
-            Clock.schedule_once(enemy.change_mode, enemy.mode_change_timer)
+            enemy.reset_scatter_timers()
+            enemy.reset_release_timers()
 
     def update_play_area(self, instance, value):
         """Kivy event triggered when level size changes to ensure that all
@@ -92,7 +98,6 @@ class HotrodGame(Widget):
         for enemy in self.enemies:
             enemy.move()
         self.level.check_pellet_collisions()
-
 
     def on_touch_up(self, touch):
         # Move right if player swipes right
