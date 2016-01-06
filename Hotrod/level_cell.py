@@ -40,6 +40,9 @@ class Cell(Widget):
     edges = ListProperty()
     initialised_edges = NumericProperty(0)
 
+    pellet_exists = BooleanProperty()
+    pellet = ObjectProperty()
+
     def set_edges(self):
         """Assign the correct widgets to all of the cell's CellEdge children"""
         for edge in self.edges:
@@ -86,8 +89,20 @@ class Cell(Widget):
             edge.width = self.width * self.wall_thickness
             edge.pos = (self.pos[0], self.pos[1] - self.height * self.wall_thickness)
             edge.set_edge()
-            if self.coordinates == (0,0):
-                print "edgy coords", edge.pos
+
+    def add_pellet(self):
+        self.pellet = collectable.Pellet()
+        self.pellet.width = self.width / 10
+        self.pellet.height = self.height / 10
+        self.pellet.center = self.center
+        # To keep track of coordinates for combos
+        self.pellet.coordinates = self.coordinates
+        self.add_widget(self.pellet)
+        self.pellet_exists = True
+
+    def remove_pellet(self):
+        self.remove_widget(self.pellet)
+        self.pellet_exists = False
 
 class CellEdge(Widget):
     type = ObjectProperty(None)
@@ -105,6 +120,7 @@ class CellEdge(Widget):
             wall.origin = self.parent.center
             wall.angle = self.direction.get_angle()
             self.add_widget(wall)
+        # No widget needs to be added if it is a passage
         elif self.type == CellEdgeType.passage:
             pass
 

@@ -85,6 +85,8 @@ class HotrodGame(Widget):
     score = NumericProperty(INITIAL_SCORE)
     lives = NumericProperty(INITIAL_LIVES)
 
+    pellet_value = NumericProperty(10)
+
     # GUI elements so that they can be referred to in
     # multiple methods
     game_over_screen = ObjectProperty(None)
@@ -97,7 +99,7 @@ class HotrodGame(Widget):
         self.player.move()
         for enemy in self.enemies:
             enemy.move()
-        self.level.check_pellet_collisions()
+     #   self.level.check_pellet_collisions()
 
     def on_touch_up(self, touch):
         # Move right if player swipes right

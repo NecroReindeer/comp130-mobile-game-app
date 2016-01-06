@@ -207,6 +207,16 @@ class PlayerBeetle(Character):
         and checks if player has collided with an enemy. The player stat is
         set to dead if it has.
         """
+        self.__check_enemy_collision()
+        self.__check_pellet_collision()
+
+    def __check_pellet_collision(self):
+        current_cell = self.game.level.get_cell(self.grid_position)
+        if current_cell.pellet_exists:
+            current_cell.remove_pellet()
+            self.game.score += self.game.pellet_value
+
+    def __check_enemy_collision(self):
         for enemy in self.game.enemies:
             if enemy.grid_position == self.grid_position:
                 self.dead = True
