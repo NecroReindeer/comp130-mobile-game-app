@@ -130,11 +130,11 @@
     right_edge: right_edge_id
     bottom_edge: bottom_edge_id
     top_edge: top_edge_id
+    pellet: pellet_id
 
     # Size of cell within the walls
     interior: (self.width - self.width * self.wall_thickness * 2, self.height - self.height * self.wall_thickness * 2)
     edges: [self.left_edge, self.bottom_edge, self.right_edge, self.top_edge]
-
 
     CellEdge:
         id: left_edge_id
@@ -151,6 +151,10 @@
     CellEdge:
         id: top_edge_id
         direction: direction.Direction.up
+
+    Pellet:
+        id: pellet_id
+        coordinates: self.parent.coordinates
 
 
 <PlayerBeetle>
@@ -244,11 +248,10 @@
 <Pellet>
     canvas:
         Color:
-            rgb: (0.9, 0.9, 0)
+            rgb: self.color
         Ellipse:
             pos: self.pos
             size: self.size
-
 
 <Target>
     canvas:

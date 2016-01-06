@@ -49,6 +49,9 @@ class Level(Widget):
     cells = ListProperty()
     cell_size = ObjectProperty()
 
+    power_pellet_count = NumericProperty(0)
+    power_pellet_limit = NumericProperty(4)
+
     beetle_house = {}
 
     def generate_level(self):
@@ -76,6 +79,7 @@ class Level(Widget):
         Arguments:
         (x, y) -- grid coordinates as a tuple
         """
+
         return self.cells[x][y]
 
     def get_adjacent_cell(self, cell, direction):
@@ -89,6 +93,7 @@ class Level(Widget):
         cell - the cell that the adjacent cell is relative to as a level_cell.Cell
         direction - the direction that you want to get the adjacent cell as direction.Direction
         """
+
         adjacent_cell_coords = Vector(*cell.coordinates) + direction.value
         if self.__contains_coordinates(adjacent_cell_coords):
             adjacent_cell = self.get_cell(adjacent_cell_coords)
@@ -105,6 +110,7 @@ class Level(Widget):
         Arguments:
         (x, y) -- window position coordinates as a tuple
         """
+
         grid_x = int((x - self.padding) / self.cell_size[0])
         grid_y = int(y / self.cell_size[1])
         return grid_x, grid_y
@@ -122,6 +128,12 @@ class Level(Widget):
         window_x = self.cell_size[0] * x + self.padding
         window_y = self.cell_size[1] * y
         return window_x, window_y
+
+    def __clear_level(self):
+        """Remove all widgets from the level and reset the cell list"""
+
+        self.clear_widgets()
+        self.cells = [[None for i in range(self.rows)] for i in range(self.columns)]
 
     def __generate_maze(self):
         """Procedurally generate a maze.
@@ -181,12 +193,6 @@ class Level(Widget):
         # If next_cell_coords is outside the level boundaries, set the edge to a wall
         else:
             current_cell.get_edge(direction).type = level_cell.CellEdgeType.wall
-
-    def __clear_level(self):
-        """Remove all widgets from the level and reset the cell list"""
-
-        self.clear_widgets()
-        self.cells = [[None for i in range(self.rows)] for i in range(self.columns)]
 
     def __remove_dead_ends(self):
         """Ensure that there are no single-cell dead ends.
@@ -313,7 +319,6 @@ class Level(Widget):
         # Manually set top edge of den_center in order to create one-way passage
         den_center.get_edge(direction.Direction.up).type = level_cell.CellEdgeType.passage
 
-
     def __remove_walls_around_den(self):
         """Ensure that there is a clean passage around the den.
 
@@ -363,15 +368,15 @@ class Level(Widget):
         """Perform final steps in cell-setup and add them as widgets.
 
         This method performs the final steps of cell creation, namely
-        setting up the edge widgets and ensuring they have pellets and
-        then adds them as child widgets."""
+        ensuring they have pellets and adding them as child widgets.
+        """
+
         for column in self.cells:
              for cell in column:
                  # Initialise the edges of all cells before adding them as widgets
-                 cell.set_edges()
-                 cell.add_pellet()
                  # Add widget at index 1 so that PlayerBeetle remains at 0
                  self.add_widget(cell, 1)
+                 cell.initialise_pellets()
 
     def __get_random_direction(self):
         """Return a random direction.Direction"""

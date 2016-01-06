@@ -1,10 +1,13 @@
-"""This module includes classes relating to the level's cells.
+"""Store classes relating to the level's individual cells.
+
+This module stores classes that store information about and manage the
+levels individual cells. Cells and cell edges are accessed through this module.
 
 Classes:
 Cell(Widget) -- widget representing level cell
 CellEdge(Widget) -- widget for the edges of the cell
-CellEdgeType(Widget) -- enum for classifying an edge as a wall or a passage
 Wall(Widget) -- widget representing cell walls
+CellEdgeType(Enum) -- enum for classifying an edge as a wall or a passage
 """
 
 import random
@@ -19,10 +22,26 @@ import collectable
 import direction
 
 class Cell(Widget):
-    """Widget representing each cell/square on the play area.
 
-    Children -- four CellEdge widgets
+    """Store properties and methods relating to individual cells.
+
+    This class stores Kivy properties relating to individual cells and
+    keeps track of the cell's edges.
+
+    Children:
+    Four CellEdge widgets
+    collectable.Pellet widget
+
+    Public Methods:
+    get_edge -- return the edge in a given direction
+    is_initialised -- return True if cell is fully initialised
+    get_random_uninitialised_direction -- return a random uninitialised direction
+    get_walls -- return a list of edges that are walls
+    update_cell -- update the cell's size and position
+    initialise_pellets -- set the cell's pellet's type
+    remove_pellet -- remove the cell's pellet
     """
+
     coordinates_x = NumericProperty(0)
     coordinates_y = NumericProperty(0)
     coordinates = ReferenceListProperty(coordinates_x, coordinates_y)
@@ -38,34 +57,44 @@ class Cell(Widget):
     bottom_edge = ObjectProperty(None)
 
     edges = ListProperty()
-    initialised_edges = NumericProperty(0)
 
     pellet_exists = BooleanProperty()
     pellet = ObjectProperty()
 
-    def set_edges(self):
-        """Assign the correct widgets to all of the cell's CellEdge children"""
-        for edge in self.edges:
-            edge.set_edge()
-
     def get_edge(self, direction):
-        """Return the CellEdge widget corresponding to the given direction
+        """Return the CellEdge widget corresponding to the given direction.
+
+        This method returns a reference to one of its edges in the specified
+        direction. This should be used for access to specific cell edges by this
+        and other classes.
 
         Arguments:
-        direction -- a direction.Direction"""
+        direction -- the direction of the side of the cell the edge is on as a direction.Direction
+        """
+
         for edge in self.edges:
             if edge.direction == direction:
                 return edge
 
     def is_initialised(self):
-        """Return True if all CellEdge widgets have been initialised"""
+        """Check if all cell edges have been initialised.
+
+        This method returns true if all cell edges have been assigned
+        a type.
+        """
+
         for edge in self.edges:
             if edge.type == None:
                 return False
         return True
 
     def get_random_uninitialised_direction(self):
-        """Return a random uninitialised CellEdge widget"""
+        """Return a random direction with an uninitialised edge.
+
+        This method returns a random direction where the edge has
+        not yet been assigned a type.
+        """
+
         edges = self.edges[:]
         for i in range(self.sides):
             random_edge = random.choice(edges)
@@ -75,6 +104,8 @@ class Cell(Widget):
                 edges.remove(random_edge)
 
     def get_walls(self):
+        """Return a list of edges that are walls"""
+
         walls = []
         for edge in self.edges:
             if edge.type == CellEdgeType.wall:
@@ -82,36 +113,66 @@ class Cell(Widget):
         return walls
 
     def update_cell(self):
+        """Update the cell and its children's size and position
+
+        This method ensures that cells are the correct size and that their
+        children's sizes and positions are set accordingly. It should be
+        called whenever the window size changes.
+        """
+
         self.size = self.parent.cell_size
         self.pos = self.parent.convert_to_window_position((self.coordinates_x, self.coordinates_y))
+
         for edge in self.edges:
             edge.height = self.height + (2 * self.height * self.wall_thickness)
             edge.width = self.width * self.wall_thickness
             edge.pos = (self.pos[0], self.pos[1] - self.height * self.wall_thickness)
-            edge.set_edge()
+            edge.update_edge_widget()
 
-    def add_pellet(self):
-        self.pellet = collectable.Pellet()
-        self.pellet.width = self.width / 10
-        self.pellet.height = self.height / 10
-        self.pellet.center = self.center
-        # To keep track of coordinates for combos
-        self.pellet.coordinates = self.coordinates
-        self.add_widget(self.pellet)
-        self.pellet_exists = True
+        if self.pellet_exists:
+            self.pellet.update_pellet_widget()
+
+    def initialise_pellets(self):
+        """Set the type of the pellet in the cell."""
+        if (self in self.parent.beetle_house.itervalues() or
+                    self.coordinates == self.parent.game.player.start_position):
+            self.remove_pellet()
+        else:
+            self.pellet.type = collectable.PelletType.normal
+            self.pellet_exists = True
 
     def remove_pellet(self):
+        """Remove the pellet from the cell"""
         self.remove_widget(self.pellet)
         self.pellet_exists = False
 
+
 class CellEdge(Widget):
+
+    """Store methods and properties relating to cell edges.
+
+    This class manages the size and position of the cell's edges and
+    stores information relating to its type and direction.
+
+    Kivy Events:
+    on_type -- updates the child widget when the edge's type changes
+
+    Public Methods:
+    update_edge_widget -- ensures that the edge is displaying the correct widget
+    """
+
     type = ObjectProperty(None)
     direction = ObjectProperty(None)
 
-    def set_edge(self):
-        """Check if the edge should be a wall or a passage and add
-        appropriate widget
+    def update_edge_widget(self):
+        """Ensure that the edge has the correct child widget.
+
+        This method ensures that the edge possesses a wall widget
+        if the edge is a wall. It also ensures that the wall widget
+        is the correct size and position.
+        It should be called when the edge type or window size changes.
         """
+
         self.clear_widgets()
         if self.type == CellEdgeType.wall:
             wall = Wall()
@@ -120,9 +181,16 @@ class CellEdge(Widget):
             wall.origin = self.parent.center
             wall.angle = self.direction.get_angle()
             self.add_widget(wall)
-        # No widget needs to be added if it is a passage
-        elif self.type == CellEdgeType.passage:
-            pass
+
+    def on_type(self, instance, value):
+        """Update edge's child widgets when edge type changes.
+
+        This Kivy event is called when the self.type changes and triggers
+        the edge's child widgets to be updated.
+        """
+
+        self.update_edge_widget()
+
 
 class Wall(Widget):
     angle = NumericProperty(0)

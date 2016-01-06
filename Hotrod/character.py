@@ -197,6 +197,10 @@ class PlayerBeetle(Character):
 
     """
 
+    start_x = NumericProperty(0)
+    start_y = NumericProperty(0)
+    start_position = ReferenceListProperty(start_x, start_y)
+
     color = ObjectProperty((1, 1, 0))
     dead = BooleanProperty(False)
 

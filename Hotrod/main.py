@@ -39,7 +39,7 @@ class PlayArea(Widget):
         self.game.level.generate_level()
 
     def initialise_characters(self):
-        self.game.player.initialise((0, 0))
+        self.game.player.initialise(self.game.player.start_position)
         for enemy in self.game.enemies:
             starting_cell = random.choice(self.game.level.beetle_house.values())
             enemy.initialise(starting_cell.coordinates)
@@ -61,9 +61,6 @@ class PlayArea(Widget):
         for column in self.game.level.cells:
             for cell in column:
                 cell.update_cell()
-
-        for pellet in self.game.level.pellets:
-            pellet.update_pellet()
 
         for enemy in self.game.enemies:
             enemy.update_character()
