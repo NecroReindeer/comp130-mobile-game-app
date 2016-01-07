@@ -134,17 +134,28 @@ class Cell(Widget):
 
     def initialise_pellets(self):
         """Set the type of the pellet in the cell."""
+
         if (self in self.parent.beetle_house.itervalues() or
                     self.coordinates == self.parent.game.player.start_position):
             self.remove_pellet()
         else:
-            self.pellet.type = collectable.PelletType.normal
+            pellet_type = self.get_pellet_type()
+            self.pellet.type = pellet_type
             self.pellet_exists = True
 
     def remove_pellet(self):
         """Remove the pellet from the cell"""
+
         self.remove_widget(self.pellet)
         self.pellet_exists = False
+
+    def get_pellet_type(self):
+        # Temporary for testing
+        diceroll = random.uniform(0, 1)
+        if diceroll < self.pellet.power_probability:
+            return collectable.PelletType.power
+        else:
+            return collectable.PelletType.normal
 
 
 class CellEdge(Widget):

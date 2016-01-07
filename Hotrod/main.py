@@ -46,11 +46,6 @@ class PlayArea(Widget):
             enemy.reset_scatter_timers()
 
     def start_enemy_timers(self):
-        # for enemy in self.game.enemies:
-        #     # Ensure that change_mode isn't scheduled twice
-        #     Clock.unschedule(enemy.change_mode)
-        #     Clock.schedule_once(enemy.change_mode, enemy.mode_change_timer)
-
         for enemy in self.game.enemies:
             enemy.reset_scatter_timers()
             enemy.reset_release_timers()
@@ -77,16 +72,18 @@ class HotrodGame(Widget):
     level = ObjectProperty(None)
 
     player = ObjectProperty(None)
-
     enemies = ListProperty()
+
     score = NumericProperty(INITIAL_SCORE)
     lives = NumericProperty(INITIAL_LIVES)
 
     pellet_value = NumericProperty(10)
+    powerup_length = NumericProperty(10)
 
     # GUI elements so that they can be referred to in
     # multiple methods
     game_over_screen = ObjectProperty(None)
+    heads_up_display = ObjectProperty(None)
 
     def start(self):
         self.play_area.start_game()
@@ -95,8 +92,10 @@ class HotrodGame(Widget):
     def update(self, dt):
         self.player.move()
         for enemy in self.enemies:
-            enemy.move()
-     #   self.level.check_pellet_collisions()
+            if enemy.dead:
+                enemy.retreat()
+            else:
+                enemy.move()
 
     def on_touch_up(self, touch):
         # Move right if player swipes right
@@ -116,9 +115,9 @@ class HotrodGame(Widget):
         """Kivy event called when number of lives changes"""
         self.play_area.initialise_characters()
         if self.lives <= 0:
+            # Stop the game
             Clock.unschedule(self.update)
             self.show_game_over_screen()
-            # Stop the game
 
     def show_game_over_screen(self):
         self.game_over_screen = user_interface.GameOverScreen()

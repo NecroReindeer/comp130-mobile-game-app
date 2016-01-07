@@ -373,9 +373,7 @@ class Level(Widget):
 
         for column in self.cells:
              for cell in column:
-                 # Initialise the edges of all cells before adding them as widgets
-                 # Add widget at index 1 so that PlayerBeetle remains at 0
-                 self.add_widget(cell, 1)
+                 self.add_widget(cell)
                  cell.initialise_pellets()
 
     def __get_random_direction(self):

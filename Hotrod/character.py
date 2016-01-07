@@ -20,6 +20,7 @@ from kivy.properties import BooleanProperty
 from kivy.vector import Vector
 from kivy.clock import Clock
 
+import collectable
 import direction
 import level_cell
 import test
@@ -64,8 +65,11 @@ class Character(Widget):
         # Copy of previous window position
         previous_pos = self.center[:]
 
-        self.pos = Vector(self.current_direction.value[0] * self.speed,
+        new_position = Vector(self.current_direction.value[0] * self.speed,
                           self.current_direction.value[1] * self.speed) + self.pos
+
+        self.pos = new_position
+
         self._check_position()
         self._update_direction((previous_pos))
         self._update_position()
@@ -194,7 +198,6 @@ class PlayerBeetle(Character):
     Kivy Properties:
     color -- ObjectProperty storing the color of the character
     dead -- BooleanProperty storing whether the player is dead or not
-
     """
 
     start_x = NumericProperty(0)
@@ -203,27 +206,49 @@ class PlayerBeetle(Character):
 
     color = ObjectProperty((1, 1, 0))
     dead = BooleanProperty(False)
+    powered_up = BooleanProperty(False)
 
     def on_grid_position(self, instance, value):
-        """Check for enemy collisions on grid position change.
+        """Check for enemy and pellet collisions on grid position change.
 
         When the player grid position changes, this kivy event is called
-        and checks if player has collided with an enemy. The player stat is
-        set to dead if it has.
+        and checks if player has collided with an enemy or pellet.
         """
         self.__check_enemy_collision()
         self.__check_pellet_collision()
 
     def __check_pellet_collision(self):
+        """Check for pellet collision.
+
+        This method checks if the player has collided with any pellets.
+        If so, the score is adjusted or a power-up is applied appropriately.
+        """
         current_cell = self.game.level.get_cell(self.grid_position)
         if current_cell.pellet_exists:
             current_cell.remove_pellet()
             self.game.score += self.game.pellet_value
 
+            if current_cell.pellet.type == collectable.PelletType.power:
+                self.powered_up = True
+                print self.powered_up
+                # Color change temporary for testing
+                self.color = (1, 1, 1)
+                Clock.schedule_once(self.__remove_powerup, self.game.powerup_length)
+
     def __check_enemy_collision(self):
+        """Check for enemy collisions.
+
+        This method checks if the player is in the same grid position as an
+        enemy. If so, the player is set to dead. If the player has a power-up, the
+        player is not set to dead and the enemy retreats to the beetle den.
+        """
         for enemy in self.game.enemies:
             if enemy.grid_position == self.grid_position:
-                self.dead = True
+                print self.powered_up
+                if self.powered_up:
+                    enemy.dead = True
+                elif not enemy.dead:
+                    self.dead = True
 
     def on_dead(self, instance, value):
         """Check if the player is dead and remove a life if so.
@@ -238,6 +263,11 @@ class PlayerBeetle(Character):
         else:
             pass
 
+    def __remove_powerup(self, dt):
+        """Remove the power-up status from the player."""
+        # Temporary color change for testing
+        self.color = (1, 1, 0)
+        self.powered_up = False
 
 class EnemyBeetle(Character):
 
@@ -258,6 +288,9 @@ class EnemyBeetle(Character):
 
     pursuing = BooleanProperty(False)
     dormant = BooleanProperty(True)
+
+    dead = BooleanProperty(False)
+
     mode_change_timer = NumericProperty(0)
 
     def reset_scatter_timers(self):
@@ -302,6 +335,24 @@ class EnemyBeetle(Character):
     def activate(self, dt):
         """Change enemy state from dormant to active"""
         self.dormant = False
+
+    def retreat(self):
+        """Move the enemy to the beetle den.
+
+        This method moves the enemy to the beetle den if it is dead.
+        The enemy is set to not dead upon reaching the beetle den.
+        This method should be called every frame in place of move if
+        the enemy is dead.
+        """
+        beetle_house_center = self.game.level.beetle_house['center'].center
+        direction_vector =  Vector(beetle_house_center) - Vector(self.center)
+        direction_vector = direction_vector.normalize()
+
+        if not self.collide_point(*beetle_house_center):
+            self.pos = direction_vector + Vector(self.pos)
+        else:
+            self.center = beetle_house_center
+            self.dead = False
 
     def _set_next_direction(self):
         """Set the next intended movement direction."""
@@ -387,7 +438,10 @@ class EnemyBeetle(Character):
         player moves, in case one is stationary.
         """
         if self.game.player.grid_position == self.grid_position:
-            self.game.player.dead = True
+            if self.game.player.powered_up:
+                self.dead = True
+            elif not self.dead:
+                self.game.player.dead = True
 
 
 class RedBeetle(EnemyBeetle):

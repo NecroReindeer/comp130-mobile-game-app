@@ -12,6 +12,8 @@ class Pellet(Widget):
     coordinates = ReferenceListProperty(coordinates_x, coordinates_y)
 
     type = ObjectProperty()
+    power_probability = NumericProperty(0.05)
+
     color = ObjectProperty((0, 0, 0))
 
     def update_pellet_widget(self):
