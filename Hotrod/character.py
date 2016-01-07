@@ -12,6 +12,8 @@ BlueBeetle(EnemyBeetle) -- class for the blue beetle enemy
 OrangeBeetle(EnemyBeetle) -- class for the orange beetle enemy
 """
 
+import random
+
 from kivy.uix.widget import Widget
 from kivy.properties import ObjectProperty
 from kivy.properties import NumericProperty
@@ -62,6 +64,7 @@ class Character(Widget):
         """
         if isinstance(self, EnemyBeetle):
             self._set_next_direction()
+
         # Copy of previous window position
         previous_pos = self.center[:]
 
@@ -230,9 +233,10 @@ class PlayerBeetle(Character):
 
             if current_cell.pellet.type == collectable.PelletType.power:
                 self.powered_up = True
-                print self.powered_up
                 # Color change temporary for testing
                 self.color = (1, 1, 1)
+                for enemy in self.game.enemies:
+                    enemy.fleeing = True
                 Clock.schedule_once(self.__remove_powerup, self.game.powerup_length)
 
     def __check_enemy_collision(self):
@@ -268,6 +272,8 @@ class PlayerBeetle(Character):
         # Temporary color change for testing
         self.color = (1, 1, 0)
         self.powered_up = False
+        for enemy in self.game.enemies:
+            enemy.fleeing = False
 
 class EnemyBeetle(Character):
 
@@ -288,6 +294,7 @@ class EnemyBeetle(Character):
 
     pursuing = BooleanProperty(False)
     dormant = BooleanProperty(True)
+    fleeing = BooleanProperty(False)
 
     dead = BooleanProperty(False)
 
@@ -299,6 +306,7 @@ class EnemyBeetle(Character):
         This method resets the pursuing/scatter state and resets the timer.
         It should be called when the player dies or a new game/level is started.
         """
+
         Clock.unschedule(self.change_mode)
         self.pursuing = False
         self.mode_change_timer = 7
@@ -310,6 +318,7 @@ class EnemyBeetle(Character):
         This method resets the enemy state to dormant and resets its release timer.
         It should only be called when a new game or level is started.
         """
+
         Clock.unschedule(self.activate)
         self.dormant = True
         Clock.schedule_once(self.activate, self.activation_timer)
@@ -322,6 +331,7 @@ class EnemyBeetle(Character):
         After the mode is changed, the timer for this method being called again
         is set depending on the mode that the enemy is now in.
         """
+
         self.pursuing = not self.pursuing
         self.current_direction = self.current_direction.get_opposite()
 
@@ -334,6 +344,7 @@ class EnemyBeetle(Character):
 
     def activate(self, dt):
         """Change enemy state from dormant to active"""
+
         self.dormant = False
 
     def retreat(self):
@@ -344,6 +355,7 @@ class EnemyBeetle(Character):
         This method should be called every frame in place of move if
         the enemy is dead.
         """
+
         beetle_house_center = self.game.level.beetle_house['center'].center
         direction_vector =  Vector(beetle_house_center) - Vector(self.center)
         direction_vector = direction_vector.normalize()
@@ -360,6 +372,9 @@ class EnemyBeetle(Character):
             current_cell = self.game.level.get_cell(self.grid_position)
             if current_cell.get_edge(self.current_direction).type == level_cell.CellEdgeType.wall:
                 self.next_direction = self.current_direction.get_opposite()
+        elif self.fleeing:
+            possible_moves = self.__get_possible_moves()
+            self.next_direction = self.__get_random_move(possible_moves)
         else:
             if self.game.level.get_cell(self.grid_position) == self.game.level.beetle_house['center']:
                 self.target_position = self.game.level.beetle_house['center'].coordinates + Vector(0, 1)
@@ -372,6 +387,7 @@ class EnemyBeetle(Character):
 
     def __get_possible_moves(self):
         """Return a list of directions the enemy is allowed to move in."""
+
         # List in this order means priority is up-left-down-right when using directions.pop
         directions = [direction.Direction.right,
                       direction.Direction.down,
@@ -389,6 +405,7 @@ class EnemyBeetle(Character):
         Arguments:
         possible_moves -- a list of directions the enemy is allowed to travel in
         """
+
         current_cell = self.game.level.get_cell(self.grid_position)
         best_moves = []
         shortest_distance = None
@@ -405,6 +422,18 @@ class EnemyBeetle(Character):
         # Return the shortest move that is the highest priority in up-left-down-right
         return best_moves.pop()
 
+    def __get_random_move(self, possible_moves):
+        """Return a random direction.
+
+        This method returns a random direction from a given
+        list of possible moves.
+
+        Arguments:
+        possible_moves -- a list of directions the enemy is allowed to travel in
+        """
+
+        return random.choice(possible_moves)
+
     def __direction_is_allowed(self, direction):
         """Return true if the enemy is allowed to travel in the given direction.
 
@@ -415,6 +444,7 @@ class EnemyBeetle(Character):
         Arguments:
         direction -- direction to be checked (as a direction.Direction)
         """
+
         current_cell = self.game.level.get_cell(self.grid_position)
         # Cannot move in the direction if there is a wall
         if current_cell.get_edge(direction).type == level_cell.CellEdgeType.wall:
@@ -437,11 +467,17 @@ class EnemyBeetle(Character):
         This needs to be checked when the enemy moves as well as when the
         player moves, in case one is stationary.
         """
+
         if self.game.player.grid_position == self.grid_position:
             if self.game.player.powered_up:
                 self.dead = True
             elif not self.dead:
                 self.game.player.dead = True
+
+    def on_fleeing(self, instance, value):
+        # This will stop the normal mode changes happening
+        # Will implement when I add level progression
+        pass
 
 
 class RedBeetle(EnemyBeetle):
