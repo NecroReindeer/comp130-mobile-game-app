@@ -19,6 +19,7 @@ from kivy.properties import ObjectProperty
 from kivy.properties import NumericProperty
 from kivy.properties import ReferenceListProperty
 from kivy.properties import BooleanProperty
+from kivy.core.audio import SoundLoader
 from kivy.vector import Vector
 from kivy.clock import Clock
 
@@ -211,6 +212,8 @@ class PlayerBeetle(Character):
     dead = BooleanProperty(False)
     powered_up = BooleanProperty(False)
 
+    last_chomp_high = BooleanProperty(False)
+
     def on_grid_position(self, instance, value):
         """Check for enemy and pellet collisions on grid position change.
 
@@ -231,7 +234,15 @@ class PlayerBeetle(Character):
             current_cell.remove_pellet()
             self.game.score += self.game.pellet_value
 
+            if not self.last_chomp_high:
+                self.game.sounds['chomp_high'].play()
+                self.last_chomp_high = True
+            else:
+                self.game.sounds['chomp_low'].play()
+                self.last_chomp_high = False
+
             if current_cell.pellet.type == collectable.PelletType.power:
+                Clock.unschedule(self.__remove_powerup)
                 self.powered_up = True
                 # Color change temporary for testing
                 self.color = (1, 1, 1)
@@ -309,6 +320,7 @@ class EnemyBeetle(Character):
 
         Clock.unschedule(self.change_mode)
         self.pursuing = False
+        # Temporary for testing purposes, it will be variable when multiple levels are introduced
         self.mode_change_timer = 7
         Clock.schedule_once(self.change_mode, self.mode_change_timer)
 
@@ -336,9 +348,11 @@ class EnemyBeetle(Character):
         self.current_direction = self.current_direction.get_opposite()
 
         if self.pursuing:
+            # Temporary for testing purposes, will be variable when multiple levels are introduced
             self.mode_change_timer = 10
             Clock.schedule_once(self.change_mode, self.mode_change_timer)
         else:
+            # Temporary for testing purposes, will be variable when multiple levels are introduced
             self.mode_change_timer = 5
             Clock.schedule_once(self.change_mode, self.mode_change_timer)
 
@@ -377,7 +391,7 @@ class EnemyBeetle(Character):
             self.next_direction = self.__get_random_move(possible_moves)
         else:
             if self.game.level.get_cell(self.grid_position) == self.game.level.beetle_house['center']:
-                self.target_position = self.game.level.beetle_house['center'].coordinates + Vector(0, 1)
+            #    self.target_position = self.game.level.beetle_house['center'].coordinates + Vector(0, 1)
                 self.next_direction = direction.Direction.up
             else:
                 self.target_position = self.get_target_position()
@@ -479,6 +493,10 @@ class EnemyBeetle(Character):
         # Will implement when I add level progression
         pass
 
+    def on_dead(self, instance, value):
+        if self.dead:
+            self.game.sounds['retreat'].play()
+
 
 class RedBeetle(EnemyBeetle):
 
@@ -493,7 +511,12 @@ class RedBeetle(EnemyBeetle):
     activation_timer = NumericProperty(0)
 
     def get_target_position(self):
-        """Determine and return the target position"""
+        """Determine and return the target position.
+
+        This method returns the target position depending on the enemy's mode.
+        The red beetle's target position is the player's position when pursuing.
+        The target position is the upper right corner when scattering.
+        """
         if self.pursuing:
             # For testing purposes
             self.target.pos = self.game.level.convert_to_window_position(self.game.player.grid_position)
@@ -519,7 +542,14 @@ class PinkBeetle(EnemyBeetle):
     activation_timer = NumericProperty(10)
 
     def get_target_position(self):
-        """Determine and return the target position"""
+        """Determine and return the target position
+
+        This method returns the target position depending on the enemy's mode.
+        The pink beetle's target position is two spaces ahead of the player's position
+        when pursuing.
+        The target position is the upper left corner when scattering.
+        """
+
         if self.pursuing:
             player_position = self.game.player.grid_position
             player_direction_vector = self.game.player.current_direction.value
@@ -547,7 +577,14 @@ class BlueBeetle(EnemyBeetle):
     activation_timer = NumericProperty(20)
 
     def get_target_position(self):
-        """Determine and return the target position"""
+        """Determine and return the target position
+
+        This method returns the target position depending on the enemy's mode.
+        The blue beetle's target position is the twice the vector between the
+        player's position and the red beetles position when pursuing.
+        The target position is the lower right corner when scattering.
+        """
+
         if self.pursuing:
             player_position = self.game.player.grid_position
             player_direction_vector = self.game.player.current_direction.value
@@ -582,7 +619,14 @@ class OrangeBeetle(EnemyBeetle):
     flee_distance = NumericProperty(4)
 
     def get_target_position(self):
-        """Determine and return the target position"""
+        """Determine and return the target position
+
+        This method returns the target position depending on the enemy's mode.
+        The orange beetle's target position is the player's position when the distance
+        away from the player is greater than flee_distance. It is the same as its
+        scatter target if the distance is less than flee_distance.
+        The target position is the lower left corner when scattering.
+        """
         if self.pursuing:
             player_position = self.game.player.grid_position
             distance_from_player = Vector(player_position).distance(self.grid_position)
