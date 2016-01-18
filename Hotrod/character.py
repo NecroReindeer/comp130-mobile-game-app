@@ -101,6 +101,10 @@ class Character(Widget):
             # Always start with high note
             self.last_chomp_high = False
 
+        if isinstance(self, EnemyBeetle):
+            self.scatter_length = self.game.scatter_length
+            self.chase_length = self.game.chase_length
+
     def update_character(self):
         """Update the character's size and position relative to the level.
 
@@ -245,6 +249,8 @@ class PlayerBeetle(Character):
                     enemy.fleeing = True
                 Clock.schedule_once(self.__remove_powerup, self.game.powerup_length)
 
+            self.game.pellet_count -= 1
+
     def __check_enemy_collision(self):
         """Check for enemy collisions.
 
@@ -325,7 +331,9 @@ class EnemyBeetle(Character):
 
     dead = BooleanProperty(False)
 
-    mode_change_timer = NumericProperty(0)
+    scatter_length = NumericProperty()
+    chase_length = NumericProperty()
+    mode_change_timer = NumericProperty()
 
     def reset_scatter_timers(self):
         """Reset the mode to scatter and the timer to its initial state.
@@ -337,7 +345,7 @@ class EnemyBeetle(Character):
         Clock.unschedule(self.change_mode)
         self.pursuing = False
         # Temporary for testing purposes, it will be variable when multiple levels are introduced
-        self.mode_change_timer = 7
+        self.mode_change_timer = self.scatter_length
         Clock.schedule_once(self.change_mode, self.mode_change_timer)
 
     def reset_release_timers(self):
@@ -365,11 +373,11 @@ class EnemyBeetle(Character):
 
         if self.pursuing:
             # Temporary for testing purposes, will be variable when multiple levels are introduced
-            self.mode_change_timer = 10
+            self.mode_change_timer = self.chase_length
             Clock.schedule_once(self.change_mode, self.mode_change_timer)
         else:
             # Temporary for testing purposes, will be variable when multiple levels are introduced
-            self.mode_change_timer = 5
+            self.mode_change_timer = self.scatter_length
             Clock.schedule_once(self.change_mode, self.mode_change_timer)
 
     def activate(self, dt):

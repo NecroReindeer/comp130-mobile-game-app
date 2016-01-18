@@ -30,6 +30,16 @@ SOUND_DIRECTORY = "sound"
 INITIAL_LIVES = 3
 # The player's score always starts at 0
 INITIAL_SCORE = 0
+# Initial level should always be 1
+INITIAL_LEVEL = 1
+
+INITIAL_PELLET_VALUE = 10
+INITIAL_POWERUP_COUNT = 4
+INITIAL_POWERUP_TIME = 10
+INITIAL_SCATTER_TIME = 7
+INITIAL_CHASE_TIME = 15
+INITIAL_SPEED_MULTIPLIER = 1
+
 
 # This is a separate widget because I intend to make HotrodGame into a layout
 class PlayArea(Widget):
@@ -178,8 +188,17 @@ class HotrodGame(Widget):
     score = NumericProperty(INITIAL_SCORE)
     lives = NumericProperty(INITIAL_LIVES)
 
-    pellet_value = NumericProperty(10)
-    powerup_length = NumericProperty(10)
+    # Game properties
+    game_properties = ListProperty()
+    level_number = NumericProperty(1)
+    pellet_count = NumericProperty()
+    powerup_count = NumericProperty()
+    pellet_value = NumericProperty(INITIAL_PELLET_VALUE)
+    powerup_limit = NumericProperty(INITIAL_POWERUP_COUNT)
+    powerup_length = NumericProperty(INITIAL_POWERUP_TIME)
+    scatter_length = NumericProperty(INITIAL_SCATTER_TIME)
+    chase_length = NumericProperty(INITIAL_CHASE_TIME)
+    speed_multiplier = NumericProperty(INITIAL_SPEED_MULTIPLIER)
 
     # GUI elements so that they can be referred to in
     # multiple methods
@@ -194,7 +213,8 @@ class HotrodGame(Widget):
     def start(self):
         """Start the game.
 
-        This method begins game progression."""
+        This method begins game progression.
+        """
 
         self.play_area.start_game()
 
@@ -259,7 +279,9 @@ class HotrodGame(Widget):
         This kivy event responds to changes in the boolean that
         states whether the game is active or not. If the game becomes
         active, updates are scheduled. If the game becomes inactive,
-        updates are unscheduled."""
+        updates are unscheduled.
+        """
+
         if self.game_active:
             Clock.schedule_interval(self.play_area.update, 1/FPS)
         else:
@@ -289,9 +311,41 @@ class HotrodGame(Widget):
 
         self.remove_widget(self.game_over_screen)
         self.unbind(size=self.game_over_screen.set_size)
+        self.initialise_properties()
+        self.start()
+
+    def initialise_properties(self):
+        self.level_number = INITIAL_LEVEL
         self.score = INITIAL_SCORE
         self.lives = INITIAL_LIVES
+        self.pellet_value = INITIAL_PELLET_VALUE
+
+        self.powerup_length = INITIAL_POWERUP_TIME
+        self.scatter_length = INITIAL_SCATTER_TIME
+        self.chase_length = INITIAL_CHASE_TIME
+        self.speed_multiplier = INITIAL_SPEED_MULTIPLIER
+
+    def advance_level(self):
+        self.game_active = False
+        self.level_number += 1
+        self.lives += 1
         self.start()
+
+    def increase_difficulty(self):
+        # Literals are temporary
+        self.speed_multiplier *= 1.1
+        self.scatter_length *= 0.9
+        self.chase_length *= 1.1
+        self.powerup_length *= 0.9
+        self.pellet_value *= 1.1
+
+    def on_level_number(self, instance, value):
+        if self.level_number != 1:
+            self.increase_difficulty()
+
+    def on_pellet_count(self, instance, value):
+        if self.pellet_count == 0:
+            self.advance_level()
 
 
 class HotrodApp(App):

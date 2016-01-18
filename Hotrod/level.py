@@ -69,6 +69,7 @@ class Level(Widget):
         self.__remove_dead_ends()
         self.__create_den()
         self.__add_cells()
+        self.__add_powerups()
 
     def get_cell(self, (x, y)):
         """Return the cell at given grid coordinates.
@@ -375,6 +376,15 @@ class Level(Widget):
              for cell in column:
                  self.add_widget(cell)
                  cell.initialise_pellets()
+
+    def __add_powerups(self):
+        powerup_count = 0
+        while powerup_count < self.game.powerup_limit:
+            coordinates = self.__get_random_coordinates()
+            cell = self.get_cell(coordinates)
+            if cell.pellet_exists:
+                cell.pellet.type = collectable.PelletType.power
+                powerup_count +=1
 
     def __get_random_direction(self):
         """Return a random direction.Direction"""

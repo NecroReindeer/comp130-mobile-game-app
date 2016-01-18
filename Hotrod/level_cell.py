@@ -139,23 +139,15 @@ class Cell(Widget):
                     self.coordinates == self.parent.game.player.start_position):
             self.remove_pellet()
         else:
-            pellet_type = self.get_pellet_type()
-            self.pellet.type = pellet_type
+            self.pellet.type = collectable.PelletType.normal
             self.pellet_exists = True
+            self.parent.game.pellet_count += 1
 
     def remove_pellet(self):
         """Remove the pellet from the cell"""
 
         self.remove_widget(self.pellet)
         self.pellet_exists = False
-
-    def get_pellet_type(self):
-        # Temporary for testing
-        diceroll = random.uniform(0, 1)
-        if diceroll < self.pellet.power_probability:
-            return collectable.PelletType.power
-        else:
-            return collectable.PelletType.normal
 
 
 class CellEdge(Widget):
