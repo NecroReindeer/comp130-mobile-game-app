@@ -88,6 +88,7 @@ class Character(Widget):
         Arguments:
         start_position -- the cell coordinates that the character should start in
         """
+
         self.grid_position = start_position
         starting_cell = self.game.level.get_cell(start_position)
         # Set size to interior cell size
@@ -95,6 +96,10 @@ class Character(Widget):
         self.center = starting_cell.center
         self.current_direction = direction.Direction.right
         self.next_direction = self.current_direction
+
+        if isinstance(self, PlayerBeetle):
+            # Always start with high note
+            self.last_chomp_high = False
 
     def update_character(self):
         """Update the character's size and position relative to the level.
@@ -212,16 +217,8 @@ class PlayerBeetle(Character):
     dead = BooleanProperty(False)
     powered_up = BooleanProperty(False)
 
-    last_chomp_high = BooleanProperty(False)
-
-    def on_grid_position(self, instance, value):
-        """Check for enemy and pellet collisions on grid position change.
-
-        When the player grid position changes, this kivy event is called
-        and checks if player has collided with an enemy or pellet.
-        """
-        self.__check_enemy_collision()
-        self.__check_pellet_collision()
+    last_chomp_high = BooleanProperty()
+    chomp_sound = ObjectProperty()
 
     def __check_pellet_collision(self):
         """Check for pellet collision.
@@ -230,22 +227,20 @@ class PlayerBeetle(Character):
         If so, the score is adjusted or a power-up is applied appropriately.
         """
         current_cell = self.game.level.get_cell(self.grid_position)
+
         if current_cell.pellet_exists:
             current_cell.remove_pellet()
             self.game.score += self.game.pellet_value
-
-            if not self.last_chomp_high:
-                self.game.sounds['chomp_high'].play()
-                self.last_chomp_high = True
-            else:
-                self.game.sounds['chomp_low'].play()
-                self.last_chomp_high = False
+            self.chomp_sound.play()
+            self.last_chomp_high = not self.last_chomp_high
 
             if current_cell.pellet.type == collectable.PelletType.power:
                 Clock.unschedule(self.__remove_powerup)
+                self.game.sounds['power_up'].play()
                 self.powered_up = True
                 # Color change temporary for testing
                 self.color = (1, 1, 1)
+
                 for enemy in self.game.enemies:
                     enemy.fleeing = True
                 Clock.schedule_once(self.__remove_powerup, self.game.powerup_length)
@@ -265,18 +260,9 @@ class PlayerBeetle(Character):
                 elif not enemy.dead:
                     self.dead = True
 
-    def on_dead(self, instance, value):
-        """Check if the player is dead and remove a life if so.
-
-        This is kivy event called when player's dead status changes. If
-        the player is dead, a life is removed and the player is set to
-        not dead.
-        """
-        if self.dead:
-             self.game.lives -= 1
-             self.dead = False
-        else:
-            pass
+    def __remove_life(self):
+        self.game.lives -= 1
+        self.dead = False
 
     def __remove_powerup(self, dt):
         """Remove the power-up status from the player."""
@@ -285,6 +271,36 @@ class PlayerBeetle(Character):
         self.powered_up = False
         for enemy in self.game.enemies:
             enemy.fleeing = False
+
+    def on_last_chomp_high(self, instance, value):
+        if self.last_chomp_high:
+            self.chomp_sound = self.game.sounds["chomp_low"]
+        else:
+            self.chomp_sound = self.game.sounds["chomp_high"]
+
+    def on_grid_position(self, instance, value):
+        """Check for enemy and pellet collisions on grid position change.
+
+        When the player grid position changes, this kivy event is called
+        and checks if player has collided with an enemy or pellet.
+        """
+        self.__check_enemy_collision()
+        self.__check_pellet_collision()
+
+    def on_dead(self, instance, value):
+        """Check if the player is dead and remove a life if so.
+
+        This is kivy event called when player's dead status changes. If
+        the player is dead, a life is removed and the player is set to
+        not dead.
+        """
+
+        if self.dead:
+             self.__remove_life()
+        else:
+            # Do nothing if set to alive
+            pass
+
 
 class EnemyBeetle(Character):
 
@@ -391,7 +407,7 @@ class EnemyBeetle(Character):
             self.next_direction = self.__get_random_move(possible_moves)
         else:
             if self.game.level.get_cell(self.grid_position) == self.game.level.beetle_house['center']:
-            #    self.target_position = self.game.level.beetle_house['center'].coordinates + Vector(0, 1)
+                self.target_position = self.game.level.beetle_house['center'].coordinates + Vector(0, 1)
                 self.next_direction = direction.Direction.up
             else:
                 self.target_position = self.get_target_position()
@@ -491,7 +507,13 @@ class EnemyBeetle(Character):
     def on_fleeing(self, instance, value):
         # This will stop the normal mode changes happening
         # Will implement when I add level progression
-        pass
+        if self.fleeing:
+            # So doesn't play 4 at once
+            if self.game.sounds['frightened'].state == 'stop':
+                self.game.sounds['frightened'].loop = True
+                self.game.sounds['frightened'].play()
+        else:
+            self.game.sounds['frightened'].stop()
 
     def on_dead(self, instance, value):
         if self.dead:

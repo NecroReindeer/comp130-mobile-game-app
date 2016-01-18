@@ -13,6 +13,7 @@ from kivy.clock import Clock
 from kivy.config import Config
 from kivy.uix.button import Button
 from kivy.core.audio import SoundLoader
+from kivy.core.audio.audio_sdl2 import SoundSDL2
 
 import direction
 import level
@@ -25,9 +26,9 @@ FPS = 60
 # The relative location of the game's sound files
 SOUND_DIRECTORY = "sound"
 
-# The player starts with 3 lives
+# The player always starts with 3 lives
 INITIAL_LIVES = 3
-# The player's score starts at 0
+# The player's score always starts at 0
 INITIAL_SCORE = 0
 
 # This is a separate widget because I intend to make HotrodGame into a layout
@@ -42,6 +43,7 @@ class PlayArea(Widget):
         That is, on first start, after a game over, or on
         a new level.
         """
+
         self.set_up_level()
         jingle = self.game.sounds['jingle']
         jingle.play()
@@ -55,19 +57,9 @@ class PlayArea(Widget):
         initialises the characters. It should be called when
         a new game or level starts.
         """
+
         self.generate_level()
         self.initialise_characters()
-
-    def start_updates(self, event):
-        """Start the game updating.
-
-        This method begins the actual gameplay. It schedules
-        the updates and begins the enemy's mode timers. It should
-        be called when a new game or level starts.
-        """
-
-        self.start_enemy_timers()
-        Clock.schedule_interval(self.game.update, 1.0/FPS)
 
     def generate_level(self):
         """Generate the level.
@@ -96,6 +88,46 @@ class PlayArea(Widget):
             starting_cell = random.choice(self.game.level.beetle_house.values())
             enemy.initialise(starting_cell.coordinates)
 
+    def start_updates(self, event):
+        """Start the game updating.
+
+        This method begins the actual gameplay. It schedules
+        the updates and begins the enemy's mode timers. It should
+        be called when a new game or level starts.
+        """
+
+        self.start_enemy_timers()
+        self.game.game_active = True
+
+    def update(self, dt):
+        """Update the game state.
+
+        This method should be called once every frame. It updates the
+        state of the game, in this case, the characters' positions.
+        """
+
+        self.game.player.move()
+        for enemy in self.game.enemies:
+            if enemy.dead:
+                enemy.retreat()
+            else:
+                enemy.move()
+
+    def update_play_area(self, instance, value):
+        """Ensure that game element sizes are correct.
+
+        This Kivy event is triggered when level size changes to ensure
+        that all elements of the play area are positioned and sized correctly
+        """
+
+        for column in self.game.level.cells:
+            for cell in column:
+                cell.update_cell()
+
+        for enemy in self.game.enemies:
+            enemy.update_character()
+        self.game.player.update_character()
+
     def start_enemy_timers(self):
         """Start the timers for the enemies' mode changes.
 
@@ -110,18 +142,7 @@ class PlayArea(Widget):
             enemy.reset_scatter_timers()
             enemy.reset_release_timers()
 
-    def update_play_area(self, instance, value):
-        """Kivy event triggered when level size changes to ensure that all
-        elements of the play area are positioned and sized correctly"""
-        for column in self.game.level.cells:
-            for cell in column:
-                cell.update_cell()
-
-        for enemy in self.game.enemies:
-            enemy.update_character()
-        self.game.player.update_character()
-
-    def reset_after_death(self):
+    def reset_after_death(self, event):
         """Reset the characters' positions and reset the scatter timer.
 
         This method both resets the characters' positions as well
@@ -133,6 +154,8 @@ class PlayArea(Widget):
         for enemy in self.game.enemies:
             enemy.reset_scatter_timers()
 
+        self.game.game_active = True
+
 
 class HotrodGame(Widget):
     """Manage the game and application.
@@ -142,6 +165,7 @@ class HotrodGame(Widget):
     to general game properties such as score and lives.
     Gameplay widgets access each other through this widget.
     """
+
     # Reference to the play area
     play_area = ObjectProperty(None)
     # Reference to the level
@@ -165,7 +189,13 @@ class HotrodGame(Widget):
     # Dictionary containing all sounds used in the game
     sounds = ObjectProperty()
 
+    game_active = BooleanProperty(False)
+
     def start(self):
+        """Start the game.
+
+        This method begins game progression."""
+
         self.play_area.start_game()
 
     def load_sounds(self):
@@ -174,25 +204,13 @@ class HotrodGame(Widget):
         This method loads the sounds for use in the game and
         stores them in a dictionary for easy access.
         """
+
         self.sounds = {}
-        self.sounds['bg'] = SoundLoader.load(os.path.join(SOUND_DIRECTORY, 'song.wav'))
-        self.sounds['jingle'] = SoundLoader.load(os.path.join(SOUND_DIRECTORY, 'jingle.wav'))
-        self.sounds['chomp_high'] = SoundLoader.load(os.path.join(SOUND_DIRECTORY, 'chomp_high.wav'))
-        self.sounds['chomp_low'] = SoundLoader.load(os.path.join(SOUND_DIRECTORY, 'chomp_low.wav'))
-        self.sounds['retreat'] = SoundLoader.load(os.path.join(SOUND_DIRECTORY, 'retreat.wav'))
-
-    def update(self, dt):
-        """Update the game state.
-
-        This method should be called once every frame. It updates the
-        state of the game, in this case, the characters' positions.
-        """
-        self.player.move()
-        for enemy in self.enemies:
-            if enemy.dead:
-                enemy.retreat()
-            else:
-                enemy.move()
+        # Dictionary keys correspond to filenames
+        for file in os.listdir(SOUND_DIRECTORY):
+            filename, extension = os.path.splitext(file)
+            key = filename
+            self.sounds[key] = SoundSDL2(source=(os.path.join(SOUND_DIRECTORY, file)))
 
     def on_touch_up(self, touch):
         """Detect player swipes and change character's next direction accordingly
@@ -223,13 +241,31 @@ class HotrodGame(Widget):
         screen is displayed.
         """
 
-        self.play_area.reset_after_death()
-        if self.lives <= 0:
-            # Stop the game
-            Clock.unschedule(self.update)
-            self.show_game_over_screen()
+        if self.game_active:
+            self.game_active = False
 
-    def show_game_over_screen(self):
+            if self.lives <= 0:
+                game_over_sound = self.sounds['game_over']
+                game_over_sound.bind(on_stop = self.show_game_over_screen)
+                self.sounds['game_over'].play()
+            else:
+                death_sound = self.sounds['death']
+                death_sound.bind(on_stop = self.play_area.reset_after_death)
+                self.sounds['death'].play()
+
+    def on_game_active(self, instance, value):
+        """Start and stop game updates.
+
+        This kivy event responds to changes in the boolean that
+        states whether the game is active or not. If the game becomes
+        active, updates are scheduled. If the game becomes inactive,
+        updates are unscheduled."""
+        if self.game_active:
+            Clock.schedule_interval(self.play_area.update, 1/FPS)
+        else:
+            Clock.unschedule(self.play_area.update)
+
+    def show_game_over_screen(self, event):
         """Show the game over screen.
 
         This method shows the game over screen. The game over screen
