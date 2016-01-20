@@ -78,9 +78,6 @@ class PlayArea(Widget):
         jingle.play()
         # Gameplay doesn't proceed until the jingle has finished
         jingle.bind(on_stop=self.start_updates)
-        # Ensure that this is done well before updates are scheduled!
-        for enemy in self.game.enemies:
-            enemy.deactivate()
 
     def set_up_level(self):
         """Set up the level and characters.
@@ -91,7 +88,7 @@ class PlayArea(Widget):
         """
 
         self.generate_level()
-        self.initialise_characters()
+        self.reset_characters()
 
     def generate_level(self):
         """Generate the level.
@@ -106,12 +103,25 @@ class PlayArea(Widget):
         random.seed(seed)
         self.game.level.generate_level()
 
-    def initialise_characters(self):
-        """Initialise the characters' size and positions.
+    def reset_characters(self):
+        """Completely reset the characters.
 
-        This method ensures the enemies and player's size is correct,
-        as well as setting them to their starting positions. It should be
-        called when a new game or level is started, as well as
+        This method ensures the characters' size, positions and
+        certain modes are initialised, as well as resetting the
+        activation timers, mode length and start position for the enemies.
+        It should be called when a new game or level is started.
+        """
+
+        self.game.player.initialise()
+        for enemy in self.game.enemies:
+            enemy.reset_character()
+
+    def initialise_characters(self):
+        """Initialise the characters.
+
+        This method ensures the characters' size, positions and
+        certain modes are set to their initial values.
+        It should be called when a new game or level is started, as well as
         when the player dies.
         """
 
@@ -123,8 +133,9 @@ class PlayArea(Widget):
         """Start the game updating.
 
         This method begins the actual gameplay by setting the
-        game_active property to True. It should
-        be called when a new game or level starts.
+        game_active property to True, as well as beginning
+        the enemies' timers.. It should be called when a new game
+        or level starts.
         """
 
         self.start_enemy_timers()
@@ -147,7 +158,7 @@ class PlayArea(Widget):
     def update_play_area(self, instance, value):
         """Ensure that game element sizes are correct.
 
-        This Kivy event is triggered when level size changes to ensure
+        This Kivy event is triggered when window/level size changes to ensure
         that all elements of the play area are positioned and sized correctly
         """
 
@@ -160,30 +171,34 @@ class PlayArea(Widget):
         self.game.player.update_character()
 
     def start_enemy_timers(self):
-        """Start the timers for the enemies' mode changes.
+        """Start the timers for the enemies' mode changes and release.
 
         This method initialises the timers that count down
         to the enemies mode changes. This includes the timer
         between scatter/chase mode change, and the timer that
         determines when they are released. It should be called
         when a new game or level is started.
+
+        Note: timers are started from this widget to ensure that they
+        start after the intro music stops.
         """
 
         for enemy in self.game.enemies:
-            enemy.reset_scatter_timers()
-            enemy.reset_release_timers()
+            enemy.start_scatter_timer()
+            enemy.start_release_timer()
 
     def reset_after_death(self, event):
         """Reset the characters' positions and reset the scatter timer.
 
         This method both resets the characters' positions as well
-        as resetting the enemies' scatter mode change timers.
+        as resetting the enemies' chase mode change timers.
         It should only be called when the player has lost a life
-        without it resulting in a game over."""
+        without it resulting in a game over.
+        """
 
         self.initialise_characters()
         for enemy in self.game.enemies:
-            enemy.reset_scatter_timers()
+            enemy.start_scatter_timer()
         self.game.game_active = True
 
 

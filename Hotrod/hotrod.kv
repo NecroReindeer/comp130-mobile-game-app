@@ -182,9 +182,16 @@
     canvas:
         Color:
             rgb: self.color
+        PushMatrix
+        Rotate:
+            origin: self.center
+            # Because the image has the character facing up
+            angle: self.angle + 90
         Rectangle:
+            source: "images/hotrod.png"
             pos: self.pos
             size: self.size
+        PopMatrix
 
 
 <RedBeetle>
@@ -192,9 +199,16 @@
     canvas:
         Color:
             rgb: self.color
+        PushMatrix
+        Rotate:
+            origin: self.center
+            # Because the image has the character facing up
+            angle: self.angle + 90
         Rectangle:
+            source: "images/red.png"
             pos: self.pos
             size: self.size
+        PopMatrix
 
     Target:
         id: red_target
@@ -207,9 +221,16 @@
     canvas:
         Color:
             rgb: self.color
+        PushMatrix
+        Rotate:
+            origin: self.center
+            # Because the image has the character facing up
+            angle: self.angle + 90
         Rectangle:
+            source: "images/pink.png"
             pos: self.pos
             size: self.size
+        PopMatrix
 
     Target:
         id: pink_target
@@ -315,6 +336,3 @@
             font_size: self.height / 2
             color: (0, 0, 0, 1)
             text: "Restart"
-
-
-

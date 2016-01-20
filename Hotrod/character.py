@@ -60,26 +60,24 @@ class Character(Widget):
     current_direction = ObjectProperty(direction.Direction.right)
     next_direction = ObjectProperty(direction.Direction.right)
 
+    angle = NumericProperty()
+
     def move(self):
         """Move the character.
 
-        This method moves the player character and ensures
+        This method moves the character and ensures
         that characters are positioned correctly. It should be
         called every frame.
         """
-        if isinstance(self, EnemyBeetle):
-            self._set_next_direction()
 
         # Copy of previous window position
-        previous_pos = self.center[:]
-
+        previous_position = self.center[:]
         new_position = Vector(self.current_direction.value[0] * self.speed,
                           self.current_direction.value[1] * self.speed) + self.pos
-
         self.pos = new_position
 
         self._check_position()
-        self._update_direction((previous_pos))
+        self._update_direction((previous_position))
         self._update_position()
 
     def initialise(self):
@@ -90,22 +88,32 @@ class Character(Widget):
         current and next directions.
         """
 
-        if isinstance(self, EnemyBeetle):
-            self._unschedule_all_timers()
-            self._set_start_position()
-            self._initialise_mode_lengths()
-
-        if isinstance(self, PlayerBeetle):
-            self._initialise_chomp_sound()
-
-        self._initialise_modes()
         self.initialise_direction()
-
         starting_cell = self.game.level.get_cell(self.start_position)
         # Size must be set first or it does it incorrectly
         self.initialise_size(starting_cell)
         self.initialise_position(starting_cell)
 
+    def initialise_direction(self):
+        """Initialise the starting directions of the characters.
+
+        This method initialises the starting directions of the characters.
+        All characters start facing right.
+        This method should be called when a new game/level is started, or
+        when the player dies.
+        """
+
+        self.current_direction = direction.Direction.right
+        self.next_direction = direction.Direction.right
+        self.angle = self.current_direction.get_angle()
+
+    def initialise_position(self, starting_cell):
+        self.grid_position = starting_cell.coordinates
+        self.center = starting_cell.center
+
+    def initialise_size(self, starting_cell):
+        # Set size to interior of cell size
+        self.size = starting_cell.interior
 
     def update_character(self):
         """Update the character's size and position relative to the level.
@@ -119,26 +127,6 @@ class Character(Widget):
         current_cell = self.game.level.get_cell(self.grid_position)
         self.center = current_cell.center
         self.size = current_cell.interior
-
-    def initialise_direction(self):
-        """Initialise the starting directions of the characters.
-
-        This method initialises the starting directions of the characters.
-        All characters start facing right.
-        This method should be called when a new game/level is started, or
-        when the player dies.
-        """
-
-        self.current_direction = direction.Direction.right
-        self.next_direction = direction.Direction.right
-
-    def initialise_position(self, starting_cell):
-        self.grid_position = starting_cell.coordinates
-        self.center = starting_cell.center
-
-    def initialise_size(self, starting_cell):
-        # Set size to interior of cell size
-        self.size = starting_cell.interior
 
     def _check_position(self):
         """Ensure the character cannot move through walls.
@@ -213,6 +201,7 @@ class Character(Widget):
     def _set_direction(self):
         """Set the current direction to the pending direction"""
         self.current_direction = self.next_direction
+        self.angle = self.current_direction.get_angle()
 
     def _update_position(self):
         """Update the stored position of the player in grid coordinates"""
@@ -244,12 +233,18 @@ class PlayerBeetle(Character):
     last_chomp_high = BooleanProperty()
     chomp_sound = ObjectProperty()
 
+    def initialise(self):
+        self.__initialise_chomp_sound()
+        self.__initialise_modes()
+        Character.initialise(self)
+
     def __check_pellet_collision(self):
         """Check for pellet collision.
 
         This method checks if the player has collided with any pellets.
         If so, the score is adjusted or a power-up is applied appropriately.
         """
+
         current_cell = self.game.level.get_cell(self.grid_position)
         if current_cell.pellet_exists:
             if current_cell.pellet.type == collectable.PelletType.power:
@@ -264,6 +259,7 @@ class PlayerBeetle(Character):
         enemy. If so, the player is set to dead. If the player has a power-up, the
         player is not set to dead and the enemy retreats to the beetle den.
         """
+
         if self.game.game_active:
             for enemy in self.game.enemies:
                 if enemy.grid_position == self.grid_position:
@@ -301,11 +297,11 @@ class PlayerBeetle(Character):
         """Remove the power-up status from the player."""
         self.powered_up = False
 
-    def _initialise_chomp_sound(self):
+    def __initialise_chomp_sound(self):
         # Always start with high note
         self.last_chomp_high = False
 
-    def _initialise_modes(self):
+    def __initialise_modes(self):
         self.powered_up = False
         self.dead = False
 
@@ -382,7 +378,19 @@ class EnemyBeetle(Character):
     mode_change_start = NumericProperty()
     mode_time_remaining = NumericProperty()
 
-    def reset_scatter_timers(self):
+    def initialise(self):
+        self._initialise_chase_mode()
+        self._initialise_flee_mode()
+        Character.initialise(self)
+
+    def reset_character(self):
+        self.__unschedule_all_timers()
+        self.__deactivate()
+        self._initialise_mode_lengths()
+        self._set_start_position()
+        self.initialise()
+
+    def start_scatter_timer(self):
         """Reset the mode to scatter and the timer to its initial state.
 
         This method resets the pursuing/scatter state and resets the timer.
@@ -390,12 +398,10 @@ class EnemyBeetle(Character):
         """
 
         Clock.unschedule(self.__change_mode)
-        # Start in scatter mode
-        self.pursuing = False
         self.mode_change_timer = self.scatter_length
         Clock.schedule_once(self.__change_mode, self.mode_change_timer)
 
-    def reset_release_timers(self):
+    def start_release_timer(self):
         """Reset the enemy state to dormant and the activation timer to its inital state.
 
         This method resets the enemy state to dormant and resets its release timer.
@@ -405,9 +411,13 @@ class EnemyBeetle(Character):
         Clock.unschedule(self.__activate)
         Clock.schedule_once(self.__activate, self.activation_timer)
 
-    def _unschedule_all_timers(self):
+    def __unschedule_all_timers(self):
         Clock.unschedule(self.__activate)
         Clock.unschedule(self.__change_mode)
+
+    def move(self):
+        self._set_next_direction()
+        Character.move(self)
 
     def retreat(self):
         """Move the enemy to the beetle den.
@@ -450,11 +460,11 @@ class EnemyBeetle(Character):
                 best_move = self.__get_shortest_move(possible_moves)
                 self.next_direction = best_move
 
-    def _initialise_modes(self):
-        # Don't reset dormant state here
-        # Changes to dormant state should only be made by activation
-        self.fleeing = False
+    def _initialise_chase_mode(self):
         self.pursuing = False
+
+    def _initialise_flee_mode(self):
+        self.fleeing = False
 
     def _initialise_mode_lengths(self):
         self.scatter_length = self.game.scatter_length
@@ -479,9 +489,10 @@ class EnemyBeetle(Character):
             self.mode_change_timer = self.scatter_length
             Clock.schedule_once(self.__change_mode, self.mode_change_timer)
 
-    def deactivate(self):
+    def __deactivate(self):
         self.dormant = True
 
+    # Needed to be a method to schedule on Clock
     def __activate(self, dt):
         """Change enemy state from dormant to active"""
         self.dormant = False
