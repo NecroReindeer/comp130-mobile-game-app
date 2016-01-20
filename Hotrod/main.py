@@ -1,3 +1,4 @@
+import json
 import random
 import os
 import sys
@@ -8,12 +9,14 @@ from kivy.properties import ObjectProperty
 from kivy.properties import NumericProperty
 from kivy.properties import BooleanProperty
 from kivy.properties import ListProperty
+from kivy.properties import StringProperty
 from kivy.vector import Vector
 from kivy.clock import Clock
 from kivy.config import Config
 from kivy.uix.button import Button
 from kivy.core.audio import SoundLoader
 from kivy.core.audio.audio_sdl2 import SoundSDL2
+from kivy.network.urlrequest import UrlRequest
 
 import direction
 import level
@@ -211,24 +214,20 @@ class HotrodGame(Widget):
     Gameplay widgets access each other through this widget.
     """
 
-    # Reference to the play area
+    # References to game elements
     play_area = ObjectProperty(None)
-    # Reference to the level
     level = ObjectProperty(None)
-    # Reference to the player
     player = ObjectProperty(None)
-    # List containing references to the enemies
     enemies = ListProperty()
 
+    # Properties game keeps track of
     score = NumericProperty(INITIAL_SCORE)
     lives = NumericProperty(INITIAL_LIVES)
+    level_number = NumericProperty(INITIAL_LEVEL)
+    player_name = StringProperty()
 
     # Game properties
-    game_properties = ListProperty()
-
-    level_number = NumericProperty(INITIAL_LEVEL)
     pellet_count = NumericProperty()
-
     pellet_value = NumericProperty(INITIAL_PELLET_VALUE)
 
     # Difficulty modifiers
@@ -238,14 +237,17 @@ class HotrodGame(Widget):
     chase_length = NumericProperty(INITIAL_CHASE_TIME)
     speed_multiplier = NumericProperty(INITIAL_SPEED_MULTIPLIER)
 
-    # GUI elements so that they can be referred to in
-    # multiple methods
+    # GUI elements
+    screens = ListProperty()
     game_over_screen = ObjectProperty(None)
+    start_screen = ObjectProperty(None)
+    login_screen = ObjectProperty(None)
     heads_up_display = ObjectProperty(None)
 
     # Dictionary containing all sounds used in the game
     sounds = ObjectProperty()
 
+    # For managing game state
     game_active = BooleanProperty(False)
 
     def start(self):
@@ -253,7 +255,7 @@ class HotrodGame(Widget):
 
         This method begins game progression.
         """
-
+        self.remove_screens()
         self.play_area.start_game()
 
     def load_sounds(self):
@@ -336,6 +338,64 @@ class HotrodGame(Widget):
         else:
             Clock.unschedule(self.play_area.update)
 
+    def show_screen(self, screen):
+        """Show a given screen.
+
+        This method displays the given screen. The screens must
+        inherit from user_interface.Screen so that they have the
+        set_size method.
+
+        Arguments:
+        screen - desired screen as a user_interface.Screen
+        """
+
+        screen.size = self.size
+        screen.center = self.center
+        self.add_widget(screen)
+        self.bind(size=screen.set_size)
+        self.screens.append(screen)
+
+    def remove_screens(self):
+        """Remove all screen widgets.
+
+        This method removes all existing screens from
+        visibility and unbinds them from the game's size.
+        """
+
+        for screen in self.screens:
+            self.remove_widget(screen)
+            self.unbind(size=screen.set_size)
+            self.screens.remove(screen)
+
+    def show_start_screen(self):
+        """Show the start screen."""
+
+        self.remove_screens()
+        self.start_screen = user_interface.StartScreen()
+        self.show_screen(self.start_screen)
+        self.start_screen.start_button.bind(on_press=self.show_login_screen)
+
+    def show_login_screen(self, event):
+        """Show the login screen."""
+
+        self.remove_screens()
+        self.login_screen = user_interface.LoginScreen()
+        self.show_screen(self.login_screen)
+        self.login_screen.new_button.bind(on_press=self.add_user)
+
+    def add_user(self, event):
+        name = self.login_screen.new_name_text.text
+        UrlRequest('http://bsccg02.ga.fal.io/adduser.py?player=' + name , self.check_added_user)
+        self.login_screen.instruction_text.text = "Trying to add player..."
+
+    def check_added_user(self, request, results):
+        name = json.loads(results)
+        if name is None:
+            self.login_screen.instruction_text.text = "Invalid name!"
+        else:
+            self.player_name = name
+            self.start()
+
     def show_game_over_screen(self, event):
         """Show the game over screen.
 
@@ -344,12 +404,8 @@ class HotrodGame(Widget):
         """
 
         self.game_over_screen = user_interface.GameOverScreen()
-        self.game_over_screen.size = self.size
-        self.game_over_screen.center = self.center
-        self.add_widget(self.game_over_screen)
+        self.show_screen(self.game_over_screen)
         self.game_over_screen.reset_button.bind(on_press=self.reset)
-        # Make sure size and position of game over screen match any window changes
-        self.bind(size=self.game_over_screen.set_size)
 
     def reset(self, event):
         """Reset the game after a game over.
@@ -357,9 +413,6 @@ class HotrodGame(Widget):
         This method removes the game over widget and resets
         the score and lives count before restarting the game.
         """
-
-        self.remove_widget(self.game_over_screen)
-        self.unbind(size=self.game_over_screen.set_size)
         self.initialise_properties()
         self.start()
 
@@ -429,7 +482,7 @@ class HotrodApp(App):
     def on_start(self):
         # Called here rather than in build() so that size is correct
         self.game.load_sounds()
-        self.game.start()
+        self.game.show_start_screen()
 
 
 if __name__ == '__main__':

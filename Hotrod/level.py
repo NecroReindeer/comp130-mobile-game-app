@@ -56,8 +56,6 @@ class Level(Widget):
 
         This method manages the level generation process, ensuring that the
         level is generated and all play elements are added.
-
-        http://weblog.jamisbuck.org/2011/1/27/maze-generation-growing-tree-algorithm
         """
 
         # Ensure generation starts from an empty level

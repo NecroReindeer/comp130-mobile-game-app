@@ -336,3 +336,136 @@
             font_size: self.height / 2
             color: (0, 0, 0, 1)
             text: "Restart"
+
+<StartScreen>
+    start_button: start
+    hotrod_logo: logo
+
+    FloatLayout:
+        canvas:
+            Color:
+                rgba: 0, 0, 0, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+            Color:
+                rgba: 1, 1, 1, 1
+            Rectangle:
+                source: "images/hotrod.png"
+                pos: self.pos
+                size: self.size
+
+        Label:
+            id: logo
+
+            pos_hint: {'center_x': 0.5, 'top': 0.9}
+            size_hint_x: 0.9
+            size_hint_y: None
+
+            text_size: self.width, None
+            height: self.texture_size[1]
+
+            halign: 'center'
+            text: "Hotrod the Beetle"
+            font_size: self.width / len(self.text) * 2
+
+            color: (0.9, 0.9, 0, 1)
+
+        Button:
+            id: start
+            size_hint: (0.25, 0.2)
+            pos_hint: {'center_x': 0.5, 'center_y': 0.3}
+            background_normal: ''
+            background_color: (0.9, 0, 0, 1)
+
+            font_size: self.height / 2
+            color: (0, 0, 0, 1)
+            text: "Start"
+
+<LoginScreen>
+    new_button: new
+    existing_button: existing
+    instruction_text: instruction
+    new_name_text: new_name
+    existing_name_text: existing_name
+
+    FloatLayout:
+        canvas:
+            Color:
+                rgba: 0, 0, 0, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        Label:
+            id: instruction
+
+            pos_hint: {'center_x': 0.5, 'top': 1}
+            size_hint_x: 0.9
+            size_hint_y: None
+
+            text_size: self.width, None
+            height: self.texture_size[1]
+
+            halign: 'center'
+            text: "Have you played before? Enter your name!"
+            font_size: self.width / len(self.text) * 2
+
+            color: (0.9, 0.9, 0, 1)
+
+        BoxLayout:
+            orientation: 'horizontal'
+            pos_hint: {'center_x': 0.5, 'top': 0.5}
+            size_hint_x: 1
+            size_hint_y: 0.5
+
+            BoxLayout:
+                orientation: 'vertical'
+                NameInput:
+                    id: new_name
+                    focus: True
+                    multiline: False
+                    size_hint: (1, 0.2)
+                    font_size: self.width / 3
+
+                Button:
+                    id: new
+                    size_hint: (1, 0.2)
+                    background_normal: ''
+                    background_color: (0.9, 0, 0, 1)
+
+                    font_size: self.height / 2
+                    color: (0, 0, 0, 1)
+                    text: "Add user"
+
+            BoxLayout:
+                orientation: 'vertical'
+                NameInput:
+                    id: existing_name
+                    multiline: False
+                    size_hint: (1, 0.2)
+                    font_size: self.width / 3
+                    border: [4, 4, 4, 4]
+
+                Button:
+                    id: existing
+                    size_hint: (1, 0.2)
+                    background_normal: ''
+                    background_color: (0.9, 0.9, 0, 1)
+
+                    font_size: self.height / 2
+                    color: (0, 0, 0, 1)
+                    text: "Log in"
+
+<NameInput>
+    multiline: False
+
+    cursor_color: (1, 0, 0, 1)
+    background_color: (0, 0, 0, 1)
+    foreground_color: (1, 1, 0, 1)
+
+    canvas.after:
+        Color:
+            rgb: 1, 1, 0
+        Line:
+            rectangle: self.x,self.y,self.width,self.height
