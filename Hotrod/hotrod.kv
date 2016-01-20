@@ -46,31 +46,26 @@
             start_x: 0
             start_y: 0
             start_position: self.start_x, self.start_y
-
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
         RedBeetle:
             id: red_beetle
             game: root_game
-
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
         PinkBeetle:
             id: pink_beetle
             game: root_game
-
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
         BlueBeetle:
             id: blue_beetle
             game: root_game
-
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
         OrangeBeetle:
             id: orange_beetle
             game: root_game
-
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
         Level:
@@ -79,7 +74,6 @@
 
             size: self.parent.height, self.parent.width
             pos: (self.padding, 0)
-
             padding: self.parent.padding
 
             cell_size: (self.height/self.rows, self.height/self.rows)
@@ -90,61 +84,42 @@
         id: hud
         game: root_game
 
-        size: self.game.size
+        height: self.game.height
+        width: self.game.padding
 
         score_label: score
         lives_label: lives
 
         FloatLayout:
-
-            Label:
-                id: lives
+            HUDText:
+                id: name
                 game: root_game
-                pos_hint: {'x': 0.015, 'top': 0.95}
-                size_hint_x: None
-                size_hint_y: None
+                pos_hint: {'x': 0.1, 'top': 1}
+                text: "Name: " + str(self.game.player_name)
 
-                width: self.game.padding / 2
-                text_size: self.width, None
-
-                text: "Lives: " + str(self.game.lives)
-
-            Label:
-                id: score
-                game: root_game
-                pos_hint: {'x': 0.015, 'top': 0.85}
-                size_hint_x: None
-                size_hint_y: None
-
-                width: self.game.padding / 2
-                text_size: self.width, None
-
-                text: "Score: " + str(self.game.score)
-
-            Label:
+            HUDText:
                 id: level
                 game: root_game
-                pos_hint: {'x': 0.015, 'top': 1}
-                size_hint_x: None
-                size_hint_y: None
-
-                width: self.game.padding / 2
-                text_size: self.width, None
-
+                pos_hint: {'x': 0.1, 'top': 0.95}
                 text: "Level: " + str(self.game.level_number)
 
-            Label:
+            HUDText:
                 id: level
                 game: root_game
-                pos_hint: {'x': 0.015, 'top': 0.9}
-                size_hint_x: None
-                size_hint_y: None
-
-                width: self.game.padding / 2
-                text_size: self.width, None
-
+                pos_hint: {'x': 0.1, 'top': 0.9}
                 text: "Speed: " + str(self.game.speed_multiplier)
 
+            HUDText:
+                id: lives
+                game: root_game
+                pos_hint: {'x': 0.1, 'top': 0.85}
+                text: "Lives: " + str(self.game.lives)
+
+            HUDText:
+                id: score
+                game: root_game
+                pos_hint: {'x': 0.1, 'top': 0.8}
+                text: "Score: " + str(self.game.score)
 
 <Cell>
     left_edge: left_edge_id
@@ -181,7 +156,7 @@
 <PlayerBeetle>
     canvas:
         Color:
-            rgb: self.color
+            rgba: self.color
         PushMatrix
         Rotate:
             origin: self.center
@@ -198,7 +173,7 @@
     target: red_target
     canvas:
         Color:
-            rgb: self.color
+            rgba: self.color
         PushMatrix
         Rotate:
             origin: self.center
@@ -220,7 +195,7 @@
     target: pink_target
     canvas:
         Color:
-            rgb: self.color
+            rgba: self.color
         PushMatrix
         Rotate:
             origin: self.center
@@ -352,8 +327,9 @@
                 rgba: 1, 1, 1, 1
             Rectangle:
                 source: "images/hotrod.png"
-                pos: self.pos
-                size: self.size
+                # Centres the image
+                pos: ((self.width - self.height) / 2, 0)
+                size: self.height, self.height
 
         Label:
             id: logo
@@ -408,7 +384,7 @@
             height: self.texture_size[1]
 
             halign: 'center'
-            text: "Have you played before? Enter your name!"
+            text: "Enter your name!"
             font_size: self.width / len(self.text) * 2
 
             color: (0.9, 0.9, 0, 1)
@@ -424,9 +400,7 @@
                 NameInput:
                     id: new_name
                     focus: True
-                    multiline: False
                     size_hint: (1, 0.2)
-                    font_size: self.width / 3
 
                 Button:
                     id: new
@@ -436,16 +410,13 @@
 
                     font_size: self.height / 2
                     color: (0, 0, 0, 1)
-                    text: "Add user"
+                    text: "New user"
 
             BoxLayout:
                 orientation: 'vertical'
                 NameInput:
                     id: existing_name
-                    multiline: False
                     size_hint: (1, 0.2)
-                    font_size: self.width / 3
-                    border: [4, 4, 4, 4]
 
                 Button:
                     id: existing
@@ -458,14 +429,21 @@
                     text: "Log in"
 
 <NameInput>
+    text: "AAA"
     multiline: False
-
     cursor_color: (1, 0, 0, 1)
     background_color: (0, 0, 0, 1)
     foreground_color: (1, 1, 0, 1)
+    font_size: self.height
 
     canvas.after:
         Color:
             rgb: 1, 1, 0
         Line:
             rectangle: self.x,self.y,self.width,self.height
+
+<HUDText>
+    size_hint_x: 1
+    size_hint_y: None
+    color: (0.9, 0.9, 0, 1)
+    text_size: self.width, None

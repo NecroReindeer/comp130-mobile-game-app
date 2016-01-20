@@ -42,8 +42,8 @@ class Level(Widget):
 
     padding = NumericProperty()
 
-    columns = NumericProperty(10)
-    rows = NumericProperty(10)
+    columns = NumericProperty(8)
+    rows = NumericProperty(8)
 
     # List to contain generated cells to add as widgets
     cells = ListProperty()

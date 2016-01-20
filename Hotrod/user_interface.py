@@ -1,10 +1,7 @@
-__author__ = 'Hat'
 
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.widget import Widget
 from kivy.uix.textinput import TextInput
+from kivy.uix.label import Label
 
 class Screen(FloatLayout):
     def set_size(self, instance, value):
@@ -36,3 +33,6 @@ class NameInput(TextInput):
             return super(NameInput, self).insert_text(new_text, from_undo=from_undo)
         else:
             return super(NameInput, self).insert_text(character, from_undo=from_undo)
+
+class HUDText(Label):
+    pass

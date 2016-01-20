@@ -28,6 +28,8 @@ import direction
 import level_cell
 import test
 
+DEFAULT_COLOR = (1, 1, 1, 1)
+
 class Character(Widget):
 
     """Store methods and properties relevant to all characters.
@@ -55,7 +57,7 @@ class Character(Widget):
 
     speed = NumericProperty(0)
     speed_multiplier = NumericProperty(1)
-    color = ObjectProperty((0, 0, 0))
+    color = ObjectProperty(DEFAULT_COLOR)
 
     current_direction = ObjectProperty(direction.Direction.right)
     next_direction = ObjectProperty(direction.Direction.right)
@@ -226,7 +228,6 @@ class PlayerBeetle(Character):
     dead -- BooleanProperty storing whether the player is dead or not
     """
 
-    color = ObjectProperty((1, 1, 0))
     dead = BooleanProperty(False)
     powered_up = BooleanProperty(False)
 
@@ -636,7 +637,6 @@ class RedBeetle(EnemyBeetle):
     activation_timer -- NumericProperty representing the number of seconds until enemy is released
     """
 
-    color = ObjectProperty((1, 0, 0))
     activation_timer = NumericProperty(0)
 
     def _set_start_position(self):
@@ -676,7 +676,6 @@ class PinkBeetle(EnemyBeetle):
     activation_timer -- NumericProperty representing the number of seconds until enemy is released
     """
 
-    color = ObjectProperty((1, 0, 1))
     activation_timer = NumericProperty(10)
 
     def _set_start_position(self):

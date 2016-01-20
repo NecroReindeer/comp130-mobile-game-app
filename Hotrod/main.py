@@ -317,7 +317,7 @@ class HotrodGame(Widget):
     def on_game_active(self, instance, value):
         """Start and stop game updates.
 
-        This kivy event responds to changes in the boolean that
+        This Kivy event responds to changes in the boolean that
         states whether the game is active or not. If the game becomes
         active, updates are scheduled. If the game becomes inactive,
         updates are unscheduled.
@@ -382,6 +382,7 @@ class HotrodGame(Widget):
         self.login_screen = user_interface.LoginScreen()
         self.show_screen(self.login_screen)
         self.login_screen.new_button.bind(on_press=self.add_user)
+        self.login_screen.existing_button.bind(on_press=self.get_user)
 
     def add_user(self, event):
         name = self.login_screen.new_name_text.text
@@ -392,6 +393,21 @@ class HotrodGame(Widget):
         name = json.loads(results)
         if name is None:
             self.login_screen.instruction_text.text = "Invalid name!"
+        else:
+            self.player_name = name
+            self.start()
+
+    def get_user(self, event):
+        name = self.login_screen.existing_name_text.text
+        print name
+        UrlRequest('http://bsccg02.ga.fal.io/getuser.py?player=' + name, self.check_existing_user)
+        self.login_screen.instruction_text.text = "Trying to log in..."
+
+    def check_existing_user(self, request, results):
+        name = json.loads(results)
+        print results
+        if name is None:
+            self.login_screen.instruction_text.text = "Invalid name or player doesn't exist!"
         else:
             self.player_name = name
             self.start()
@@ -426,6 +442,8 @@ class HotrodGame(Widget):
         self.scatter_length = INITIAL_SCATTER_TIME
         self.chase_length = INITIAL_CHASE_TIME
         self.speed_multiplier = INITIAL_SPEED_MULTIPLIER
+
+        self.pellet_count = 0
 
     def advance_level(self):
         """Advance to the next level.
