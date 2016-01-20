@@ -49,9 +49,6 @@ class Level(Widget):
     cells = ListProperty()
     cell_size = ObjectProperty()
 
-    power_pellet_count = NumericProperty(0)
-    power_pellet_limit = NumericProperty(4)
-
     beetle_house = {}
 
     def generate_level(self):
@@ -382,7 +379,9 @@ class Level(Widget):
         while powerup_count < self.game.powerup_limit:
             coordinates = self.__get_random_coordinates()
             cell = self.get_cell(coordinates)
-            if cell.pellet_exists:
+            if (cell.pellet_exists and
+                        cell.pellet.type is not collectable.PelletType.power):
+
                 cell.pellet.type = collectable.PelletType.power
                 powerup_count +=1
 

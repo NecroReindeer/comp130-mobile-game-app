@@ -33,12 +33,31 @@ INITIAL_SCORE = 0
 # Initial level should always be 1
 INITIAL_LEVEL = 1
 
+# Pellets start out worth 10 points
 INITIAL_PELLET_VALUE = 10
-INITIAL_POWERUP_COUNT = 4
+# 6 powerups are spawned at the start
+INITIAL_POWERUP_COUNT = 6
+# The powerup lasts 10 seconds at the start
 INITIAL_POWERUP_TIME = 10
 INITIAL_SCATTER_TIME = 7
 INITIAL_CHASE_TIME = 15
+# The movement speed starts at 1
 INITIAL_SPEED_MULTIPLIER = 1
+
+# These are the adjustments applied when the level advances
+LIVES_BONUS = 1
+SPEED_INCREMENT = 0.1
+CHASE_INCREMENT = 1
+PELLET_VALUE_INCREMENT = 10
+SCATTER_DECREMENT = -1
+POWERUP_TIME_DECREMENT = -1
+POWERUP_COUNT_DECREMENT = -1
+
+MAX_SPEED_MULTIPLIER = 2
+MAX_PELLET_VALUE = 100
+MIN_SCATTER_LENGTH = 0
+MIN_POWERUP_LENGTH = 0
+MIN_POWERUP_LIMIT = 0
 
 
 # This is a separate widget because I intend to make HotrodGame into a layout
@@ -59,6 +78,9 @@ class PlayArea(Widget):
         jingle.play()
         # Gameplay doesn't proceed until the jingle has finished
         jingle.bind(on_stop=self.start_updates)
+        # Ensure that this is done well before updates are scheduled!
+        for enemy in self.game.enemies:
+            enemy.deactivate()
 
     def set_up_level(self):
         """Set up the level and characters.
@@ -93,16 +115,15 @@ class PlayArea(Widget):
         when the player dies.
         """
 
-        self.game.player.initialise(self.game.player.start_position)
+        self.game.player.initialise()
         for enemy in self.game.enemies:
-            starting_cell = random.choice(self.game.level.beetle_house.values())
-            enemy.initialise(starting_cell.coordinates)
+            enemy.initialise()
 
     def start_updates(self, event):
         """Start the game updating.
 
-        This method begins the actual gameplay. It schedules
-        the updates and begins the enemy's mode timers. It should
+        This method begins the actual gameplay by setting the
+        game_active property to True. It should
         be called when a new game or level starts.
         """
 
@@ -163,7 +184,6 @@ class PlayArea(Widget):
         self.initialise_characters()
         for enemy in self.game.enemies:
             enemy.reset_scatter_timers()
-
         self.game.game_active = True
 
 
@@ -190,10 +210,13 @@ class HotrodGame(Widget):
 
     # Game properties
     game_properties = ListProperty()
-    level_number = NumericProperty(1)
+
+    level_number = NumericProperty(INITIAL_LEVEL)
     pellet_count = NumericProperty()
-    powerup_count = NumericProperty()
+
     pellet_value = NumericProperty(INITIAL_PELLET_VALUE)
+
+    # Difficulty modifiers
     powerup_limit = NumericProperty(INITIAL_POWERUP_COUNT)
     powerup_length = NumericProperty(INITIAL_POWERUP_TIME)
     scatter_length = NumericProperty(INITIAL_SCATTER_TIME)
@@ -233,34 +256,35 @@ class HotrodGame(Widget):
             self.sounds[key] = SoundSDL2(source=(os.path.join(SOUND_DIRECTORY, file)))
 
     def on_touch_up(self, touch):
-        """Detect player swipes and change character's next direction accordingly
+        """Detect player swipes and change character's next direction accordingly.
 
-        This method detects swipes from the player and sets the player character's
+        This Kivy event detects swipes from the player and sets the player character's
         next direction to be the direction of the swipe.
         """
 
-        # Dividing by 10 means the swipe needs to be at least a 10th of the window
-        # Move right if player swipes right
-        if touch.pos[0] > touch.opos[0] + self.width/10:
-            self.player.next_direction = direction.Direction.right
-        # Move left if player swipes left
-        if touch.pos[0] < touch.opos[0] - self.width/10:
-            self.player.next_direction = direction.Direction.left
-        # Move up is player swipes up
-        if touch.pos[1] > touch.opos[1] + self.height/10:
-            self.player.next_direction = direction.Direction.up
-        # Move down if player swipes down
-        if touch.pos[1] < touch.opos[1] - self.height/10:
-            self.player.next_direction = direction.Direction.down
+        if self.game_active:
+            # Dividing by 10 means the swipe needs to be at least a 10th of the window
+            # Move right if player swipes right
+            if touch.pos[0] > touch.opos[0] + self.width/10:
+                self.player.next_direction = direction.Direction.right
+            # Move left if player swipes left
+            if touch.pos[0] < touch.opos[0] - self.width/10:
+                self.player.next_direction = direction.Direction.left
+            # Move up is player swipes up
+            if touch.pos[1] > touch.opos[1] + self.height/10:
+                self.player.next_direction = direction.Direction.up
+            # Move down if player swipes down
+            if touch.pos[1] < touch.opos[1] - self.height/10:
+                self.player.next_direction = direction.Direction.down
 
     def on_lives(self, instance, value):
         """Reset the play area if a life is lost or show game over screen if all are lost.
 
         Kivy event called when number of lives changes. The play area is reset upon
-        losing a life. If all lives are lost, the game stops and the game over
-        screen is displayed.
+        losing a life. If all lives are lost, the game over screen is displayed.
         """
 
+        # So that this doesn't happen when lives are reset or added after level
         if self.game_active:
             self.game_active = False
 
@@ -280,10 +304,20 @@ class HotrodGame(Widget):
         states whether the game is active or not. If the game becomes
         active, updates are scheduled. If the game becomes inactive,
         updates are unscheduled.
+
+        The game should deactivate in the following situations:
+        Lose a life
+        Getting a game over
+        Advancing to the next level
+
+        It should be restarted when:
+        Next level has begun
+        New game has begun
+        After positions have reset after death
         """
 
         if self.game_active:
-            Clock.schedule_interval(self.play_area.update, 1/FPS)
+            Clock.schedule_interval(self.play_area.update, 1.0/FPS)
         else:
             Clock.unschedule(self.play_area.update)
 
@@ -326,18 +360,36 @@ class HotrodGame(Widget):
         self.speed_multiplier = INITIAL_SPEED_MULTIPLIER
 
     def advance_level(self):
+        """Advance to the next level.
+
+        This method stops the game and increases the
+        level count and difficulty, before starting a
+        new game based on these adjusted parameters.
+        """
+
         self.game_active = False
         self.level_number += 1
         self.lives += 1
         self.start()
 
     def increase_difficulty(self):
-        # Literals are temporary
-        self.speed_multiplier *= 1.1
-        self.scatter_length *= 0.9
-        self.chase_length *= 1.1
-        self.powerup_length *= 0.9
-        self.pellet_value *= 1.1
+        if self.pellet_value <= MAX_PELLET_VALUE - PELLET_VALUE_INCREMENT:
+            self.pellet_value += PELLET_VALUE_INCREMENT
+        if self.speed_multiplier <= MAX_SPEED_MULTIPLIER - SPEED_INCREMENT:
+            self.speed_multiplier += SPEED_INCREMENT
+        if self.scatter_length >= MIN_SCATTER_LENGTH - SCATTER_DECREMENT:
+            self.scatter_length += SCATTER_DECREMENT
+        if self.powerup_length >= MIN_POWERUP_LENGTH - POWERUP_TIME_DECREMENT:
+            self.powerup_length += POWERUP_TIME_DECREMENT
+        if self.powerup_limit >= MIN_POWERUP_LIMIT - POWERUP_COUNT_DECREMENT:
+            self.powerup_limit += POWERUP_COUNT_DECREMENT
+
+        self.chase_length += CHASE_INCREMENT
+
+        print "chase: " + str(self.chase_length)
+        print "scatter: " + str(self.scatter_length)
+        print "speed:" + str(self.speed_multiplier)
+        print "power: " + str(self.powerup_length)
 
     def on_level_number(self, instance, value):
         if self.level_number != 1:
@@ -345,7 +397,8 @@ class HotrodGame(Widget):
 
     def on_pellet_count(self, instance, value):
         if self.pellet_count == 0:
-            self.advance_level()
+            if self.game_active:
+                self.advance_level()
 
 
 class HotrodApp(App):

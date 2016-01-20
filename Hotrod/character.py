@@ -45,6 +45,10 @@ class Character(Widget):
     game = ObjectProperty(None)
 
     # All characters have the following properties
+    start_x = NumericProperty(0)
+    start_y = NumericProperty(0)
+    start_position = ReferenceListProperty(start_x, start_y)
+
     x_position = NumericProperty(0)
     y_position = NumericProperty(0)
     grid_position = ReferenceListProperty(x_position, y_position)
@@ -78,32 +82,30 @@ class Character(Widget):
         self._update_direction((previous_pos))
         self._update_position()
 
-    def initialise(self, start_position):
+    def initialise(self):
         """Initialise the character's size, position and direction.
 
         This method sets the character widget to the correct inital position,
         ensures that it is the size of the cell interiors, and initialises the
         current and next directions.
-
-        Arguments:
-        start_position -- the cell coordinates that the character should start in
         """
 
-        self.grid_position = start_position
-        starting_cell = self.game.level.get_cell(start_position)
-        # Set size to interior cell size
-        self.size = starting_cell.interior
-        self.center = starting_cell.center
-        self.current_direction = direction.Direction.right
-        self.next_direction = self.current_direction
+        if isinstance(self, EnemyBeetle):
+            self._unschedule_all_timers()
+            self._set_start_position()
+            self._initialise_mode_lengths()
 
         if isinstance(self, PlayerBeetle):
-            # Always start with high note
-            self.last_chomp_high = False
+            self._initialise_chomp_sound()
 
-        if isinstance(self, EnemyBeetle):
-            self.scatter_length = self.game.scatter_length
-            self.chase_length = self.game.chase_length
+        self._initialise_modes()
+        self.initialise_direction()
+
+        starting_cell = self.game.level.get_cell(self.start_position)
+        # Size must be set first or it does it incorrectly
+        self.initialise_size(starting_cell)
+        self.initialise_position(starting_cell)
+
 
     def update_character(self):
         """Update the character's size and position relative to the level.
@@ -118,6 +120,26 @@ class Character(Widget):
         self.center = current_cell.center
         self.size = current_cell.interior
 
+    def initialise_direction(self):
+        """Initialise the starting directions of the characters.
+
+        This method initialises the starting directions of the characters.
+        All characters start facing right.
+        This method should be called when a new game/level is started, or
+        when the player dies.
+        """
+
+        self.current_direction = direction.Direction.right
+        self.next_direction = direction.Direction.right
+
+    def initialise_position(self, starting_cell):
+        self.grid_position = starting_cell.coordinates
+        self.center = starting_cell.center
+
+    def initialise_size(self, starting_cell):
+        # Set size to interior of cell size
+        self.size = starting_cell.interior
+
     def _check_position(self):
         """Ensure the character cannot move through walls.
 
@@ -125,6 +147,7 @@ class Character(Widget):
         if it attempts to move into a wall. This method should be called every
         frame, after the character has been moved.
         """
+
         current_cell = self.game.level.cells[self.x_position][self.y_position]
         current_edge = current_cell.get_edge(self.current_direction)
 
@@ -205,6 +228,7 @@ class PlayerBeetle(Character):
     namely checking if the player has collided with an enemy or is dead.
 
     Kivy Events:
+    on_last_chomp_high -- alternate the chomp sound
     on_grid_position -- check for enemy collisions
     on_dead -- remove life if player is dead
 
@@ -212,10 +236,6 @@ class PlayerBeetle(Character):
     color -- ObjectProperty storing the color of the character
     dead -- BooleanProperty storing whether the player is dead or not
     """
-
-    start_x = NumericProperty(0)
-    start_y = NumericProperty(0)
-    start_position = ReferenceListProperty(start_x, start_y)
 
     color = ObjectProperty((1, 1, 0))
     dead = BooleanProperty(False)
@@ -231,25 +251,11 @@ class PlayerBeetle(Character):
         If so, the score is adjusted or a power-up is applied appropriately.
         """
         current_cell = self.game.level.get_cell(self.grid_position)
-
         if current_cell.pellet_exists:
-            current_cell.remove_pellet()
-            self.game.score += self.game.pellet_value
-            self.chomp_sound.play()
-            self.last_chomp_high = not self.last_chomp_high
-
             if current_cell.pellet.type == collectable.PelletType.power:
-                Clock.unschedule(self.__remove_powerup)
-                self.game.sounds['power_up'].play()
                 self.powered_up = True
-                # Color change temporary for testing
-                self.color = (1, 1, 1)
-
-                for enemy in self.game.enemies:
-                    enemy.fleeing = True
-                Clock.schedule_once(self.__remove_powerup, self.game.powerup_length)
-
-            self.game.pellet_count -= 1
+                self.__frighten_enemies()
+            self.__eat_pellet(current_cell)
 
     def __check_enemy_collision(self):
         """Check for enemy collisions.
@@ -258,25 +264,63 @@ class PlayerBeetle(Character):
         enemy. If so, the player is set to dead. If the player has a power-up, the
         player is not set to dead and the enemy retreats to the beetle den.
         """
-        for enemy in self.game.enemies:
-            if enemy.grid_position == self.grid_position:
-                print self.powered_up
-                if self.powered_up:
-                    enemy.dead = True
-                elif not enemy.dead:
-                    self.dead = True
+        if self.game.game_active:
+            for enemy in self.game.enemies:
+                if enemy.grid_position == self.grid_position:
+                    if self.powered_up and enemy.fleeing:
+                        enemy.dead = True
+                    elif not enemy.dead:
+                        self.dead = True
 
     def __remove_life(self):
+        self.powered_up = False
         self.game.lives -= 1
         self.dead = False
 
+    def __eat_pellet(self, current_cell):
+        current_cell.remove_pellet()
+        self.game.score += self.game.pellet_value
+        self.chomp_sound.play()
+        self.last_chomp_high = not self.last_chomp_high
+        self.game.pellet_count -= 1
+
+    def __activate_powerup(self):
+        Clock.unschedule(self.__remove_powerup)
+        self.game.sounds['power_up'].play()
+        # Color change temporary for testing
+        self.color = (0, 1, 0)
+        Clock.schedule_once(self.__remove_powerup, self.game.powerup_length)
+
+    def __frighten_enemies(self):
+        for enemy in self.game.enemies:
+            enemy.pause_mode_change()
+            if self.game.level.get_cell(enemy.grid_position) not in self.game.level.beetle_house.itervalues():
+                enemy.fleeing = True
+
     def __remove_powerup(self, dt):
         """Remove the power-up status from the player."""
-        # Temporary color change for testing
-        self.color = (1, 1, 0)
         self.powered_up = False
-        for enemy in self.game.enemies:
-            enemy.fleeing = False
+
+    def _initialise_chomp_sound(self):
+        # Always start with high note
+        self.last_chomp_high = False
+
+    def _initialise_modes(self):
+        self.powered_up = False
+        self.dead = False
+
+    def on_powered_up(self, instance, value):
+        if self.powered_up:
+            self.__activate_powerup()
+            if self.game.sounds['frightened'].state == 'stop':
+                self.game.sounds['frightened'].loop = True
+                self.game.sounds['frightened'].play()
+        else:
+            self.game.sounds['frightened'].stop()
+            self.color = (1, 1, 0)
+            for enemy in self.game.enemies:
+                enemy.fleeing = False
+                enemy.resume_mode_change()
 
     def on_last_chomp_high(self, instance, value):
         if self.last_chomp_high:
@@ -290,8 +334,8 @@ class PlayerBeetle(Character):
         When the player grid position changes, this kivy event is called
         and checks if player has collided with an enemy or pellet.
         """
-        self.__check_enemy_collision()
         self.__check_pellet_collision()
+        self.__check_enemy_collision()
 
     def on_dead(self, instance, value):
         """Check if the player is dead and remove a life if so.
@@ -335,6 +379,9 @@ class EnemyBeetle(Character):
     chase_length = NumericProperty()
     mode_change_timer = NumericProperty()
 
+    mode_change_start = NumericProperty()
+    mode_time_remaining = NumericProperty()
+
     def reset_scatter_timers(self):
         """Reset the mode to scatter and the timer to its initial state.
 
@@ -342,11 +389,11 @@ class EnemyBeetle(Character):
         It should be called when the player dies or a new game/level is started.
         """
 
-        Clock.unschedule(self.change_mode)
+        Clock.unschedule(self.__change_mode)
+        # Start in scatter mode
         self.pursuing = False
-        # Temporary for testing purposes, it will be variable when multiple levels are introduced
         self.mode_change_timer = self.scatter_length
-        Clock.schedule_once(self.change_mode, self.mode_change_timer)
+        Clock.schedule_once(self.__change_mode, self.mode_change_timer)
 
     def reset_release_timers(self):
         """Reset the enemy state to dormant and the activation timer to its inital state.
@@ -355,35 +402,12 @@ class EnemyBeetle(Character):
         It should only be called when a new game or level is started.
         """
 
-        Clock.unschedule(self.activate)
-        self.dormant = True
-        Clock.schedule_once(self.activate, self.activation_timer)
+        Clock.unschedule(self.__activate)
+        Clock.schedule_once(self.__activate, self.activation_timer)
 
-    def change_mode(self, dt):
-        """Switch enemy between scatter and chase mode.
-
-        This method switches the enemy state between pursuing and not
-        pursuing, as well as reversing enemy direction to signify the change.
-        After the mode is changed, the timer for this method being called again
-        is set depending on the mode that the enemy is now in.
-        """
-
-        self.pursuing = not self.pursuing
-        self.current_direction = self.current_direction.get_opposite()
-
-        if self.pursuing:
-            # Temporary for testing purposes, will be variable when multiple levels are introduced
-            self.mode_change_timer = self.chase_length
-            Clock.schedule_once(self.change_mode, self.mode_change_timer)
-        else:
-            # Temporary for testing purposes, will be variable when multiple levels are introduced
-            self.mode_change_timer = self.scatter_length
-            Clock.schedule_once(self.change_mode, self.mode_change_timer)
-
-    def activate(self, dt):
-        """Change enemy state from dormant to active"""
-
-        self.dormant = False
+    def _unschedule_all_timers(self):
+        Clock.unschedule(self.__activate)
+        Clock.unschedule(self.__change_mode)
 
     def retreat(self):
         """Move the enemy to the beetle den.
@@ -399,10 +423,11 @@ class EnemyBeetle(Character):
         direction_vector = direction_vector.normalize()
 
         if not self.collide_point(*beetle_house_center):
-            self.pos = direction_vector + Vector(self.pos)
+            self.pos = (direction_vector * self.game.speed_multiplier) + Vector(self.pos)
         else:
             self.center = beetle_house_center
             self.dead = False
+            self.fleeing = False
 
     def _set_next_direction(self):
         """Set the next intended movement direction."""
@@ -410,18 +435,56 @@ class EnemyBeetle(Character):
             current_cell = self.game.level.get_cell(self.grid_position)
             if current_cell.get_edge(self.current_direction).type == level_cell.CellEdgeType.wall:
                 self.next_direction = self.current_direction.get_opposite()
+
         elif self.fleeing:
             possible_moves = self.__get_possible_moves()
             self.next_direction = self.__get_random_move(possible_moves)
+
         else:
             if self.game.level.get_cell(self.grid_position) == self.game.level.beetle_house['center']:
                 self.target_position = self.game.level.beetle_house['center'].coordinates + Vector(0, 1)
                 self.next_direction = direction.Direction.up
             else:
-                self.target_position = self.get_target_position()
+                self.target_position = self._get_target_position()
                 possible_moves = self.__get_possible_moves()
                 best_move = self.__get_shortest_move(possible_moves)
                 self.next_direction = best_move
+
+    def _initialise_modes(self):
+        # Don't reset dormant state here
+        # Changes to dormant state should only be made by activation
+        self.fleeing = False
+        self.pursuing = False
+
+    def _initialise_mode_lengths(self):
+        self.scatter_length = self.game.scatter_length
+        self.chase_length = self.game.chase_length
+
+    def __change_mode(self, dt):
+        """Switch enemy between scatter and chase mode.
+
+        This method switches the enemy state between pursuing and not
+        pursuing, as well as reversing enemy direction to signify the change.
+        After the mode is changed, the timer for this method being called again
+        is set depending on the mode that the enemy is now in.
+        """
+        self.pursuing = not self.pursuing
+        self.current_direction = self.current_direction.get_opposite()
+        self.mode_change_start = Clock.get_time()
+
+        if self.pursuing:
+            self.mode_change_timer = self.chase_length
+            Clock.schedule_once(self.__change_mode, self.mode_change_timer)
+        else:
+            self.mode_change_timer = self.scatter_length
+            Clock.schedule_once(self.__change_mode, self.mode_change_timer)
+
+    def deactivate(self):
+        self.dormant = True
+
+    def __activate(self, dt):
+        """Change enemy state from dormant to active"""
+        self.dormant = False
 
     def __get_possible_moves(self):
         """Return a list of directions the enemy is allowed to move in."""
@@ -496,10 +559,35 @@ class EnemyBeetle(Character):
         else:
             return True
 
+    def pause_mode_change(self):
+        """Pause the mode change timers.
+
+        This method pauses the mode change timers. It should be
+        called when the enemies become frightened.
+        """
+
+        Clock.unschedule(self.__change_mode)
+        pause_time = Clock.get_time()
+        time_into_mode = pause_time - self.mode_change_start
+
+        if self.pursuing:
+            self.mode_time_remaining = self.chase_length - time_into_mode
+        elif not self.pursuing:
+            self.mode_time_remaining = self.scatter_length - time_into_mode
+
+    def resume_mode_change(self):
+        """Resume the mode change timers.
+
+        This method resumes the mode change timers. It should
+        be called when the enemies stop being frightened.
+        """
+
+        Clock.schedule_once(self.__change_mode, self.mode_time_remaining)
+
     def on_grid_position(self, instance, value):
         """Check for collision with player on grid position change.
 
-        When the enemy's grid position changes, this kKvy event is called
+        When the enemy's grid position changes, this Kivy event is called
         and checks if it has collided with the player. The player state is
         set to dead if it has.
         This needs to be checked when the enemy moves as well as when the
@@ -507,26 +595,26 @@ class EnemyBeetle(Character):
         """
 
         if self.game.player.grid_position == self.grid_position:
-            if self.game.player.powered_up:
+            if self.game.player.powered_up and self.fleeing:
                 self.dead = True
             elif not self.dead:
                 self.game.player.dead = True
 
     def on_fleeing(self, instance, value):
-        # This will stop the normal mode changes happening
-        # Will implement when I add level progression
+        """Check if the enemy is fleeing and change its colour.
+        """
+
         if self.fleeing:
-            # So doesn't play 4 at once
-            if self.game.sounds['frightened'].state == 'stop':
-                self.game.sounds['frightened'].loop = True
-                self.game.sounds['frightened'].play()
+            self.color = (255, 255, 255)
+
         else:
-            self.game.sounds['frightened'].stop()
+            self.color = (255, 0, 0)
+
 
     def on_dead(self, instance, value):
+        """Check if the enemy is dead."""
         if self.dead:
             self.game.sounds['retreat'].play()
-
 
 class RedBeetle(EnemyBeetle):
 
@@ -540,7 +628,16 @@ class RedBeetle(EnemyBeetle):
     color = ObjectProperty((1, 0, 0))
     activation_timer = NumericProperty(0)
 
-    def get_target_position(self):
+    def _set_start_position(self):
+        """Set the start position of the enemy.
+
+        This method sets the start position of the enemy.
+        The red beetle starts in the center of the beetle house.
+        The start position for enemies cannot be set in the kv
+        file as it is dynamic."""
+        self.start_position = self.game.level.beetle_house['center'].coordinates
+
+    def _get_target_position(self):
         """Determine and return the target position.
 
         This method returns the target position depending on the enemy's mode.
@@ -571,7 +668,18 @@ class PinkBeetle(EnemyBeetle):
     color = ObjectProperty((1, 0, 1))
     activation_timer = NumericProperty(10)
 
-    def get_target_position(self):
+    def _set_start_position(self):
+        """Set the start position of the enemy.
+
+        This method sets the start position of the enemy.
+        The pink beetle starts in the center of the beetle house.
+        The start position for enemies cannot be set in the kv
+        file as it is dynamic.
+        """
+
+        self.start_position = self.game.level.beetle_house['center'].coordinates
+
+    def _get_target_position(self):
         """Determine and return the target position
 
         This method returns the target position depending on the enemy's mode.
@@ -606,7 +714,18 @@ class BlueBeetle(EnemyBeetle):
     color = ObjectProperty((0, 1, 1))
     activation_timer = NumericProperty(20)
 
-    def get_target_position(self):
+    def _set_start_position(self):
+        """Set the start position of the enemy.
+
+        This method sets the start position of the enemy.
+        The blue beetle starts at the right of the beetle house.
+        The start position for enemies cannot be set in the kv
+        file as it is dynamic.
+        """
+
+        self.start_position = self.game.level.beetle_house['right'].coordinates
+
+    def _get_target_position(self):
         """Determine and return the target position
 
         This method returns the target position depending on the enemy's mode.
@@ -648,7 +767,18 @@ class OrangeBeetle(EnemyBeetle):
     activation_timer = NumericProperty(30)
     flee_distance = NumericProperty(4)
 
-    def get_target_position(self):
+    def _set_start_position(self):
+        """Set the start position of the enemy.
+
+        This method sets the start position of the enemy.
+        The orange beetle starts at the left of the beetle house.
+        The start position for enemies cannot be set in the kv
+        file as it is dynamic.
+        """
+
+        self.start_position = self.game.level.beetle_house['left'].coordinates
+
+    def _get_target_position(self):
         """Determine and return the target position
 
         This method returns the target position depending on the enemy's mode.

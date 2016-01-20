@@ -43,40 +43,34 @@
             id: player_beetle_id
             game: root_game
 
-            x_position: 0
-            y_position: 0
+            start_x: 0
+            start_y: 0
+            start_position: self.start_x, self.start_y
+
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
         RedBeetle:
             id: red_beetle
             game: root_game
 
-            x_position: self.game.level.columns-1
-            y_position: self.game.level.rows - 1
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
         PinkBeetle:
             id: pink_beetle
             game: root_game
 
-            x_position: 0
-            y_position: self.game.level.rows-1
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
         BlueBeetle:
             id: blue_beetle
             game: root_game
 
-            x_position: self.game.level.columns-1
-            y_position: 0
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
         OrangeBeetle:
             id: orange_beetle
             game: root_game
 
-            x_position: 5
-            y_position: 5
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
         Level:
@@ -106,7 +100,7 @@
             Label:
                 id: lives
                 game: root_game
-                pos_hint: {'x': 0.93, 'top': 0.95}
+                pos_hint: {'x': 0.015, 'top': 0.95}
                 size_hint_x: None
                 size_hint_y: None
 
@@ -118,7 +112,7 @@
             Label:
                 id: score
                 game: root_game
-                pos_hint: {'x': 0.015, 'top': 0.95}
+                pos_hint: {'x': 0.015, 'top': 0.85}
                 size_hint_x: None
                 size_hint_y: None
 
@@ -126,6 +120,30 @@
                 text_size: self.width, None
 
                 text: "Score: " + str(self.game.score)
+
+            Label:
+                id: level
+                game: root_game
+                pos_hint: {'x': 0.015, 'top': 1}
+                size_hint_x: None
+                size_hint_y: None
+
+                width: self.game.padding / 2
+                text_size: self.width, None
+
+                text: "Level: " + str(self.game.level_number)
+
+            Label:
+                id: level
+                game: root_game
+                pos_hint: {'x': 0.015, 'top': 0.9}
+                size_hint_x: None
+                size_hint_y: None
+
+                width: self.game.padding / 2
+                text_size: self.width, None
+
+                text: "Speed: " + str(self.game.speed_multiplier)
 
 
 <Cell>
