@@ -30,5 +30,8 @@ In the screenshots below, the complete requirements for the corresponding sprint
 ####Fourth Sprint Complete 11/12/2015
 ![Fourth Sprint](https://github.com/NecroReindeer/comp130-mobile-game-app/blob/master/Sprint%20Plans/Fourth%20Sprint.png)
 
-####Fifth Sprint Complete 07/01/2015
+####Fifth Sprint Complete 07/01/2016
 ![Fifth Sprint](https://github.com/NecroReindeer/comp130-mobile-game-app/blob/master/Sprint%20Plans/Fifth%20Sprint.png)
+
+####Fifth Sprint Complete 20/01/2016
+![Sixth Sprint](https://github.com/NecroReindeer/comp130-mobile-game-app/blob/master/Sprint%20Plans/Sixth%20Sprint.png)
