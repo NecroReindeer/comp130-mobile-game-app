@@ -8,9 +8,12 @@ Game: Pac-man
 
 ##Hotrod the Beetle
 Hotrod the Beetle will be a game with mechanics like Pac-Man - the player must collect pellet objects in a maze, and the level is complete when all have been collected. The player character is a beetle named Hotrod, and the enemies are rival beetles.  
-The mazes will be procedurally generated. After the player completes a maze, a new one will be generated and the difficulty will be increased through an increase in movement speed and less enemy scatter time.  
+The mazes will be procedurally generated. After the player completes a maze, a new one will be generated and the difficulty will be increased through an increase in movement speed and less enemy scatter time. The points you can earn will also increase, however.
+
 The enemies will decide where they are going to move in a way similar to the original Pac-Man ghosts, as described [here](http://gameinternals.com/post/2072558330/understanding-pac-man-ghost-behavior).  
 The player can collect the equivilent of Pac-Man power pellets in order to defeat the enemy beetles, and send them back to their starting area.
+
+The game is survival-based, levels will continue to be generated until you run out of lives. Your score and level can be uploaded after getting a game over, and compared with the scores of others who reached the same level.
 
 ## Sprints
 In the screenshots below, the complete requirements for the corresponding sprint are in the 'Review' column. The tasks for the next sprint are in the 'To do' column.
