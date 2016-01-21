@@ -30,11 +30,11 @@ FPS = 60
 SOUND_DIRECTORY = "sound"
 
 # The player always starts with 3 lives
-INITIAL_LIVES = 3
+INITIAL_LIVES = 1
 # The player's score always starts at 0
 INITIAL_SCORE = 0
 # Initial level should always be 1
-INITIAL_LEVEL = 1
+INITIAL_LEVEL = 3
 
 # Pellets start out worth 10 points
 INITIAL_PELLET_VALUE = 10
@@ -256,6 +256,7 @@ class HotrodGame(Widget):
         This method begins game progression.
         """
         self.remove_screens()
+        self.sounds['title'].stop()
         self.play_area.start_game()
 
     def load_sounds(self):
@@ -271,6 +272,7 @@ class HotrodGame(Widget):
             filename, extension = os.path.splitext(file)
             key = filename
             self.sounds[key] = SoundSDL2(source=(os.path.join(SOUND_DIRECTORY, file)))
+        self.sounds['title'].loop = True
 
     def on_touch_up(self, touch):
         """Detect player swipes and change character's next direction accordingly.
@@ -369,7 +371,7 @@ class HotrodGame(Widget):
 
     def show_start_screen(self):
         """Show the start screen."""
-
+        self.sounds['title'].play()
         self.remove_screens()
         self.start_screen = user_interface.StartScreen()
         self.show_screen(self.start_screen)
@@ -405,22 +407,61 @@ class HotrodGame(Widget):
 
     def check_existing_user(self, request, results):
         name = json.loads(results)
-        print results
         if name is None:
             self.login_screen.instruction_text.text = "Invalid name or player doesn't exist!"
         else:
             self.player_name = name
             self.start()
 
-    def show_game_over_screen(self, event):
-        """Show the game over screen.
+    def get_best_score(self):
+        UrlRequest('http://bsccg02.ga.fal.io/getbest.py?player=' + self.player_name + '&level=' + str(self.level_number), self.upload_score)
 
-        This method shows the game over screen. The game over screen
-        is displayed until the reset button is pressed.
+    def get_high_scores(self):
+        UrlRequest('http://bsccg02.ga.fal.io/getscores.py?level=' + str(self.level_number), self.show_high_scores)
+
+    def show_high_scores(self, request, results):
+        high_scores = json.loads(results)
+        text = ''
+        for entry in high_scores:
+            name, level, score = entry
+            self.game_over_screen.level_number_text.text = level
+            text = text + name + ": " + str(score) + "\n"
+            self.game_over_screen.high_scores_text.text = text
+
+    def upload_score(self, request, results):
+        current_best = json.loads(results)
+        self.game_over_screen.best_score_text.text = "Personal best: " + str(current_best)
+        if current_best is None:
+            self.submit_high_score()
+            self.game_over_screen.best_score_text.text = "New personal best!"
+        elif self.score > current_best:
+            self.update_high_score()
+            self.game_over_screen.best_score_text.text = "New personal best!"
+        else:
+            return
+
+    def submit_high_score(self):
+        UrlRequest('http://bsccg02.ga.fal.io/submitscore.py?player=' + self.player_name +
+                   '&level=' + str(self.level_number) + '&score=' + str(self.score), )
+
+    def update_high_score(self):
+        UrlRequest('http://bsccg02.ga.fal.io/updatescore.py?player=' + self.player_name +
+                   '&level=' + str(self.level_number) + '&score=' + str(self.score), )
+
+    def show_game_over_screen(self, event):
+        """Show the game over screen and high scores.
+
+        This method shows the game over screen along with the
+        high scores for the level.
+        The game over screen is displayed until the reset button
+        is pressed.
         """
 
         self.game_over_screen = user_interface.GameOverScreen()
         self.show_screen(self.game_over_screen)
+        self.game_over_screen.player_score_text.text = "Score: " + str(self.score)
+        self.get_best_score()
+        self.get_high_scores()
         self.game_over_screen.reset_button.bind(on_press=self.reset)
 
     def reset(self, event):

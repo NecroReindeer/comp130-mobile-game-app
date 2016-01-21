@@ -36,3 +36,6 @@ class NameInput(TextInput):
 
 class HUDText(Label):
     pass
+
+class TitleText(Label):
+    pass

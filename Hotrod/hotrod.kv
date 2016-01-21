@@ -34,10 +34,8 @@
         id: play_area_id
         game: root_game
 
-        padding: (self.parent.width - self.parent.height) / 2
-
         size: self.parent.height, self.parent.height
-        pos: (self.padding, 0)
+        pos: (self.game.padding, 0)
 
         PlayerBeetle:
             id: player_beetle_id
@@ -73,8 +71,9 @@
             game: root_game
 
             size: self.parent.height, self.parent.width
+            # For some reason it doesn't work if I refer to it directly
+            padding: self.game.padding
             pos: (self.padding, 0)
-            padding: self.parent.padding
 
             cell_size: (self.height/self.rows, self.height/self.rows)
             # Initialise 2-dimensional list of correct size
@@ -283,8 +282,14 @@
     reset_button: reset
     game_over_text: game_over_text
 
-    FloatLayout:
-        orientation: "vertical"
+    player_score_text: score_text
+    best_score_text: best_text
+    level_number_text: level_text
+    high_scores_text: high_scores
+
+    BoxLayout:
+        orientation: 'horizontal'
+
         canvas:
             Color:
                 rgba: 0, 0, 0, 1
@@ -292,25 +297,51 @@
                 pos: self.pos
                 size: self.size
 
-        Label:
-            id: game_over_text
-            size_hint: (0.5, 0.5)
-            pos_hint: {'center_x': 0.5, 'top': 0.9}
+        FloatLayout:
+            TitleText:
+                id: game_over_text
 
-            font_size: self.height / 2
-            color: (0.9, 0.9, 0, 1)
-            text: "Game over!"
+                text: "Game over!"
+                font_size: self.width / len(self.text) * 2
 
-        Button:
-            id: reset
-            size_hint: (0.25, 0.2)
-            pos_hint: {'center_x': 0.5, 'center_y': 0.3}
-            background_normal: ''
-            background_color: (0.9, 0, 0, 1)
+            Button:
+                id: reset
+                size_hint: (0.9, 0.2)
+                pos_hint: {'center_x': 0.5, 'center_y': 0.3}
+                background_normal: ''
+                background_color: (0.9, 0, 0, 1)
 
-            font_size: self.height / 2
-            color: (0, 0, 0, 1)
-            text: "Restart"
+                font_size: self.height / 2
+                color: (0, 0, 0, 1)
+                text: "Restart"
+
+        FloatLayout:
+            TitleText:
+                id: score_text
+                text: 'score'
+                pos_hint: {'center_x': 0.5, 'top': 1}
+                font_size: self.width / len(self.text) * 2
+
+            TitleText:
+                id: best_text
+                text: 'Getting best...'
+                pos_hint: {'center_x': 0.5, 'top': 0.85}
+                font_size: self.width / len(self.text)
+                color: (0.9, 0, 0, 1)
+
+            TitleText:
+                id: level_text
+                text: 'level'
+                pos_hint: {'center_x': 0.5, 'top': 0.8}
+                font_size: self.width / len(self.text)
+
+            HUDText:
+                id: high_scores
+                halign: 'center'
+                pos_hint: {'center_x': 0.5, 'top': 0.7}
+                text: ' '
+                font_size: self.width / len(self.text) * 6
+
 
 <StartScreen>
     start_button: start
@@ -331,21 +362,10 @@
                 pos: ((self.width - self.height) / 2, 0)
                 size: self.height, self.height
 
-        Label:
+        TitleText:
             id: logo
-
-            pos_hint: {'center_x': 0.5, 'top': 0.9}
-            size_hint_x: 0.9
-            size_hint_y: None
-
-            text_size: self.width, None
-            height: self.texture_size[1]
-
-            halign: 'center'
             text: "Hotrod the Beetle"
             font_size: self.width / len(self.text) * 2
-
-            color: (0.9, 0.9, 0, 1)
 
         Button:
             id: start
@@ -373,21 +393,10 @@
                 pos: self.pos
                 size: self.size
 
-        Label:
+        TitleText:
             id: instruction
-
-            pos_hint: {'center_x': 0.5, 'top': 1}
-            size_hint_x: 0.9
-            size_hint_y: None
-
-            text_size: self.width, None
-            height: self.texture_size[1]
-
-            halign: 'center'
             text: "Enter your name!"
             font_size: self.width / len(self.text) * 2
-
-            color: (0.9, 0.9, 0, 1)
 
         BoxLayout:
             orientation: 'horizontal'
@@ -447,3 +456,15 @@
     size_hint_y: None
     color: (0.9, 0.9, 0, 1)
     text_size: self.width, None
+    height: self.texture_size[1]
+
+<TitleText>
+    pos_hint: {'center_x': 0.5, 'top': 0.9}
+    size_hint_x: 0.9
+    size_hint_y: None
+
+    text_size: self.width, None
+    height: self.texture_size[1]
+    halign: 'center'
+    color: (0.9, 0.9, 0, 1)
+
