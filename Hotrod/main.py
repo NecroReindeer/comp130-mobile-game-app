@@ -30,12 +30,13 @@ FPS = 60
 SOUND_DIRECTORY = "sound"
 
 # The player always starts with 3 lives
-INITIAL_LIVES = 1
+INITIAL_LIVES = 3
 # The player's score always starts at 0
 INITIAL_SCORE = 0
 # Initial level should always be 1
-INITIAL_LEVEL = 3
+INITIAL_LEVEL = 1
 
+INITIAL_KILL_VALUE = 100
 # Pellets start out worth 10 points
 INITIAL_PELLET_VALUE = 10
 # 6 powerups are spawned at the start
@@ -52,6 +53,7 @@ LIVES_BONUS = 1
 SPEED_INCREMENT = 0.1
 CHASE_INCREMENT = 1
 PELLET_VALUE_INCREMENT = 10
+KILL_VALUE_INCREMENT = 100
 SCATTER_DECREMENT = -1
 POWERUP_TIME_DECREMENT = -1
 POWERUP_COUNT_DECREMENT = -1
@@ -229,6 +231,7 @@ class HotrodGame(Widget):
     # Game properties
     pellet_count = NumericProperty()
     pellet_value = NumericProperty(INITIAL_PELLET_VALUE)
+    kill_value = NumericProperty(INITIAL_KILL_VALUE)
 
     # Difficulty modifiers
     powerup_limit = NumericProperty(INITIAL_POWERUP_COUNT)
@@ -478,6 +481,7 @@ class HotrodGame(Widget):
         self.score = INITIAL_SCORE
         self.lives = INITIAL_LIVES
         self.pellet_value = INITIAL_PELLET_VALUE
+        self.kill_value = INITIAL_KILL_VALUE
 
         self.powerup_length = INITIAL_POWERUP_TIME
         self.scatter_length = INITIAL_SCATTER_TIME
@@ -500,8 +504,6 @@ class HotrodGame(Widget):
         self.start()
 
     def increase_difficulty(self):
-        if self.pellet_value <= MAX_PELLET_VALUE - PELLET_VALUE_INCREMENT:
-            self.pellet_value += PELLET_VALUE_INCREMENT
         if self.speed_multiplier <= MAX_SPEED_MULTIPLIER - SPEED_INCREMENT:
             self.speed_multiplier += SPEED_INCREMENT
         if self.scatter_length >= MIN_SCATTER_LENGTH - SCATTER_DECREMENT:
@@ -512,6 +514,8 @@ class HotrodGame(Widget):
             self.powerup_limit += POWERUP_COUNT_DECREMENT
 
         self.chase_length += CHASE_INCREMENT
+        self.pellet_value += PELLET_VALUE_INCREMENT
+        self.kill_value += KILL_VALUE_INCREMENT
 
         print "chase: " + str(self.chase_length)
         print "scatter: " + str(self.scatter_length)
@@ -526,7 +530,6 @@ class HotrodGame(Widget):
         if self.pellet_count == 0:
             if self.game_active:
                 self.advance_level()
-
 
 class HotrodApp(App):
     # game is property so that it can be referred to

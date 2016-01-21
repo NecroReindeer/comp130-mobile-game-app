@@ -216,10 +216,17 @@
     target: blue_target
     canvas:
         Color:
-            rgb: self.color
+            rgba: self.color
+        PushMatrix
+        Rotate:
+            origin: self.center
+            # Because the image has the character facing up
+            angle: self.angle + 90
         Rectangle:
+            source: "images/blue.png"
             pos: self.pos
             size: self.size
+        PopMatrix
 
     Target:
         id: blue_target
@@ -230,10 +237,17 @@
     target: orange_target
     canvas:
         Color:
-            rgb: self.color
+            rgba: self.color
+        PushMatrix
+        Rotate:
+            origin: self.center
+            # Because the image has the character facing up
+            angle: self.angle + 90
         Rectangle:
+            source: "images/orange.png"
             pos: self.pos
             size: self.size
+        PopMatrix
 
     Target:
         id: orange_target
@@ -340,8 +354,6 @@
                 halign: 'center'
                 pos_hint: {'center_x': 0.5, 'top': 0.7}
                 text: ' '
-                font_size: self.width / len(self.text) * 6
-
 
 <StartScreen>
     start_button: start

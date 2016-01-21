@@ -28,7 +28,10 @@ import direction
 import level_cell
 import test
 
+# This makes the source image be its original colours
 DEFAULT_COLOR = (1, 1, 1, 1)
+POWER_COLOR = (1, 0, 0, 1)
+FRIGHTENED_COLOR = (0, 0, 1, 1)
 
 class Character(Widget):
 
@@ -39,8 +42,11 @@ class Character(Widget):
 
     Public methods:
     move() -- move the character. Should be called every frame.
-    initialise(start_position) -- set up the size and position of the character
+    initialise() -- set up the size and position of the character
     update_character() -- ensure that the size and position is correct
+
+    Kivy Properties:
+    color -- ObjectProperty storing the color of the character
     """
 
     # Give characters access to other widgets through game widget
@@ -82,41 +88,6 @@ class Character(Widget):
         self._update_direction((previous_position))
         self._update_position()
 
-    def initialise(self):
-        """Initialise the character's size, position and direction.
-
-        This method sets the character widget to the correct inital position,
-        ensures that it is the size of the cell interiors, and initialises the
-        current and next directions.
-        """
-
-        self.initialise_direction()
-        starting_cell = self.game.level.get_cell(self.start_position)
-        # Size must be set first or it does it incorrectly
-        self.initialise_size(starting_cell)
-        self.initialise_position(starting_cell)
-
-    def initialise_direction(self):
-        """Initialise the starting directions of the characters.
-
-        This method initialises the starting directions of the characters.
-        All characters start facing right.
-        This method should be called when a new game/level is started, or
-        when the player dies.
-        """
-
-        self.current_direction = direction.Direction.right
-        self.next_direction = direction.Direction.right
-        self.angle = self.current_direction.get_angle()
-
-    def initialise_position(self, starting_cell):
-        self.grid_position = starting_cell.coordinates
-        self.center = starting_cell.center
-
-    def initialise_size(self, starting_cell):
-        # Set size to interior of cell size
-        self.size = starting_cell.interior
-
     def update_character(self):
         """Update the character's size and position relative to the level.
 
@@ -129,6 +100,41 @@ class Character(Widget):
         current_cell = self.game.level.get_cell(self.grid_position)
         self.center = current_cell.center
         self.size = current_cell.interior
+
+    def initialise(self):
+        """Initialise the character's size, position and direction.
+
+        This method sets the character widget to the correct inital position,
+        ensures that it is the size of the cell interiors, and initialises the
+        current and next directions.
+        """
+
+        self.__initialise_direction()
+        starting_cell = self.game.level.get_cell(self.start_position)
+        # Size must be set first or it does it incorrectly
+        self.__initialise_size(starting_cell)
+        self.__initialise_position(starting_cell)
+
+    def __initialise_direction(self):
+        """Initialise the starting directions of the characters.
+
+        This method initialises the starting directions of the characters.
+        All characters start facing right.
+        This method should be called when a new game/level is started, or
+        when the player dies.
+        """
+
+        self.current_direction = direction.Direction.right
+        self.next_direction = direction.Direction.right
+        self.angle = self.current_direction.get_angle()
+
+    def __initialise_position(self, starting_cell):
+        self.grid_position = starting_cell.coordinates
+        self.center = starting_cell.center
+
+    def __initialise_size(self, starting_cell):
+        # Set size to interior of cell size
+        self.size = starting_cell.interior
 
     def _check_position(self):
         """Ensure the character cannot move through walls.
@@ -169,6 +175,7 @@ class Character(Widget):
         Arguments:
         (previous_x, previous_y) -- a tuple of the character's window coordinates on the previous frame
         """
+
         if self.next_direction != self.current_direction:
             current_cell = self.game.level.cells[self.x_position][self.y_position]
             current_edge = current_cell.get_edge(self.next_direction)
@@ -201,12 +208,23 @@ class Character(Widget):
                         self._set_direction()
 
     def _set_direction(self):
-        """Set the current direction to the pending direction"""
+        """Set the current direction to the pending direction.
+
+        This method sets the current direction to the pending
+        next direction and also ensures the angle of the
+        character corresponds.
+        """
+
         self.current_direction = self.next_direction
         self.angle = self.current_direction.get_angle()
 
     def _update_position(self):
-        """Update the stored position of the player in grid coordinates"""
+        """Update the stored position of the character.
+
+        This method updates the stored position of the character in grid
+        coordinates relative to the level's cells.
+        """
+
         grid_position = self.game.level.convert_to_grid_position(self.center)
         self.grid_position = grid_position
 
@@ -224,20 +242,41 @@ class PlayerBeetle(Character):
     on_dead -- remove life if player is dead
 
     Kivy Properties:
-    color -- ObjectProperty storing the color of the character
     dead -- BooleanProperty storing whether the player is dead or not
+    powered_up -- BooleanProperty storing whether the player is powered up
+    last_chomp_high -- BooleanProperty storing whether the last chomp sound was high
+    chomp_sound -- ObjectProperty for storing the sound to be used as chomp
     """
 
     dead = BooleanProperty(False)
     powered_up = BooleanProperty(False)
-
     last_chomp_high = BooleanProperty()
     chomp_sound = ObjectProperty()
 
     def initialise(self):
+        """Initialise the plyaer character.
+
+        This method performs initialisations specific for the player
+        character, such as chomp sound and power-up mode. It also
+        performs initialisations relevant to all characters.
+        """
+
         self.__initialise_chomp_sound()
-        self.__initialise_modes()
+        self.__initialise_states()
         Character.initialise(self)
+
+    def __initialise_chomp_sound(self):
+        """Initialise the chomp sound."""
+
+        # Always start with high note
+        self.last_chomp_high = False
+
+    def __initialise_states(self):
+        """Initialise power-up and dead states."""
+
+        # Start not dead and not powered up
+        self.powered_up = False
+        self.dead = False
 
     def __check_pellet_collision(self):
         """Check for pellet collision.
@@ -250,6 +289,8 @@ class PlayerBeetle(Character):
         if current_cell.pellet_exists:
             if current_cell.pellet.type == collectable.PelletType.power:
                 self.powered_up = True
+                # Play here so that it still plays if you collect another
+                self.game.sounds['power_up'].play()
                 self.__frighten_enemies()
             self.__eat_pellet(current_cell)
 
@@ -257,24 +298,29 @@ class PlayerBeetle(Character):
         """Check for enemy collisions.
 
         This method checks if the player is in the same grid position as an
-        enemy. If so, the player is set to dead. If the player has a power-up, the
-        player is not set to dead and the enemy retreats to the beetle den.
+        enemy. If so, the player is set to dead. If the player has a power-up
+        and the enemy is frightened, the enemy is set to dead instead.
         """
 
+        # So that it doesn't check when the game is setting up
         if self.game.game_active:
             for enemy in self.game.enemies:
                 if enemy.grid_position == self.grid_position:
+                    # Enemy still kills you if it's not scared
                     if self.powered_up and enemy.fleeing:
+                        self.game.score += self.game.kill_value
                         enemy.dead = True
                     elif not enemy.dead:
                         self.dead = True
 
-    def __remove_life(self):
-        self.powered_up = False
-        self.game.lives -= 1
-        self.dead = False
-
     def __eat_pellet(self, current_cell):
+        """Remove the pellet.
+
+        This method removes the pellet of the given cell, plays the
+        chomp sound, increases the score and decreases the pellet
+        counter. It also switches the last_chomp_high bool.
+        """
+
         current_cell.remove_pellet()
         self.game.score += self.game.pellet_value
         self.chomp_sound.play()
@@ -282,29 +328,39 @@ class PlayerBeetle(Character):
         self.game.pellet_count -= 1
 
     def __activate_powerup(self):
+        """Ensure that powerup is activated correctly.
+
+        This method fully activates the powerup, by changing the
+        player colour and scheduling the method that removes the
+        powerup for the appropriate amount of time.
+        """
+
         Clock.unschedule(self.__remove_powerup)
-        self.game.sounds['power_up'].play()
-        # Color change temporary for testing
-        self.color = (0, 1, 0)
+        self.color = (POWER_COLOR)
         Clock.schedule_once(self.__remove_powerup, self.game.powerup_length)
 
     def __frighten_enemies(self):
+        """Set the enemies to fleeing.
+
+        This method sets all of the active enemies to fleeing
+        and pauses their ordinary mode changes.
+        """
+
         for enemy in self.game.enemies:
+            # Done here as want to pause for all enemies even if not fleeing
             enemy.pause_mode_change()
             if self.game.level.get_cell(enemy.grid_position) not in self.game.level.beetle_house.itervalues():
                 enemy.fleeing = True
 
     def __remove_powerup(self, dt):
-        """Remove the power-up status from the player."""
+        """Remove the power-up status from the player.
+
+        This method is scheduled on the Kivy clock and sets the
+        player's powered up state to false when called.
+        """
+
         self.powered_up = False
 
-    def __initialise_chomp_sound(self):
-        # Always start with high note
-        self.last_chomp_high = False
-
-    def __initialise_modes(self):
-        self.powered_up = False
-        self.dead = False
 
     def on_powered_up(self, instance, value):
         if self.powered_up:
@@ -338,12 +394,14 @@ class PlayerBeetle(Character):
         """Check if the player is dead and remove a life if so.
 
         This is kivy event called when player's dead status changes. If
-        the player is dead, a life is removed and the player is set to
-        not dead.
+        the player is dead, powerup and a life is removed and the player
+        is set back to not dead.
         """
 
         if self.dead:
-             self.__remove_life()
+            self.powered_up = False
+            self.game.lives -= 1
+            self.dead = False
         else:
             # Do nothing if set to alive
             pass
