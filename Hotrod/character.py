@@ -30,8 +30,8 @@ import test
 
 # This makes the source image be its original colours
 DEFAULT_COLOR = (1, 1, 1, 1)
-POWER_COLOR = (1, 0, 0, 1)
-FRIGHTENED_COLOR = (0, 0, 1, 1)
+POWER_COLOR = (1, 1, 0, 1)
+FRIGHTENED_COLOR = (0.5, 0.5, 1, 1)
 
 class Character(Widget):
 
@@ -208,15 +208,9 @@ class Character(Widget):
                         self._set_direction()
 
     def _set_direction(self):
-        """Set the current direction to the pending direction.
-
-        This method sets the current direction to the pending
-        next direction and also ensures the angle of the
-        character corresponds.
-        """
+        """Set the current direction to the pending next direction."""
 
         self.current_direction = self.next_direction
-        self.angle = self.current_direction.get_angle()
 
     def _update_position(self):
         """Update the stored position of the character.
@@ -227,6 +221,16 @@ class Character(Widget):
 
         grid_position = self.game.level.convert_to_grid_position(self.center)
         self.grid_position = grid_position
+
+    def on_current_direction(self, instance, value):
+        """Ensure that the character rotation is correct.
+
+        This Kivy event is called when the current direction changes.
+        It ensures that the character's angle is changed whenever
+        the direction changes.
+        """
+
+        self.angle = self.current_direction.get_angle()
 
 
 class PlayerBeetle(Character):
@@ -288,10 +292,11 @@ class PlayerBeetle(Character):
         current_cell = self.game.level.get_cell(self.grid_position)
         if current_cell.pellet_exists:
             if current_cell.pellet.type == collectable.PelletType.power:
-                self.powered_up = True
-                # Play here so that it still plays if you collect another
-                self.game.sounds['power_up'].play()
+                self.__activate_powerup()
+                # Here so that new enemies still get frightened after additional pellets
                 self.__frighten_enemies()
+                # Here so that it still plays if you collect another
+                self.game.sounds['power_up'].play()
             self.__eat_pellet(current_cell)
 
     def __check_enemy_collision(self):
@@ -336,8 +341,20 @@ class PlayerBeetle(Character):
         """
 
         Clock.unschedule(self.__remove_powerup)
-        self.color = (POWER_COLOR)
+        self.powered_up = True
         Clock.schedule_once(self.__remove_powerup, self.game.powerup_length)
+
+    def __remove_powerup(self, dt):
+        """Remove the power-up status from the player.
+
+        This method is scheduled on the Kivy clock and sets the
+        player's powered up state to false when called.
+        """
+
+        self.powered_up = False
+        for enemy in self.game.enemies:
+            enemy.fleeing = False
+            enemy.resume_mode_change()
 
     def __frighten_enemies(self):
         """Set the enemies to fleeing.
@@ -350,32 +367,36 @@ class PlayerBeetle(Character):
             # Done here as want to pause for all enemies even if not fleeing
             enemy.pause_mode_change()
             if self.game.level.get_cell(enemy.grid_position) not in self.game.level.beetle_house.itervalues():
+                print enemy, enemy.grid_position
                 enemy.fleeing = True
 
-    def __remove_powerup(self, dt):
-        """Remove the power-up status from the player.
+    def on_powered_up(self, instance, value):
+        """Activate and deactivate the powerup.
 
-        This method is scheduled on the Kivy clock and sets the
-        player's powered up state to false when called.
+        This Kivy event is triggered when the players power up
+        state changes. If the player is powered up, the frightened
+        noise is played and the powerup is activated.
         """
 
-        self.powered_up = False
-
-
-    def on_powered_up(self, instance, value):
         if self.powered_up:
-            self.__activate_powerup()
+            # Only these are to be done on initial collection
+            self.color = (POWER_COLOR)
             if self.game.sounds['frightened'].state == 'stop':
                 self.game.sounds['frightened'].loop = True
                 self.game.sounds['frightened'].play()
         else:
+            # So that these are still reset on death
             self.game.sounds['frightened'].stop()
-            self.color = (1, 1, 0)
-            for enemy in self.game.enemies:
-                enemy.fleeing = False
-                enemy.resume_mode_change()
+            self.color = (DEFAULT_COLOR)
 
     def on_last_chomp_high(self, instance, value):
+        """Alternate the chomp sound.
+
+        This Kivy event is triggered when the bool storing what
+        the last chomp was is changed. It alternates which sound is
+        used for chomp
+        """
+
         if self.last_chomp_high:
             self.chomp_sound = self.game.sounds["chomp_low"]
         else:
@@ -387,13 +408,14 @@ class PlayerBeetle(Character):
         When the player grid position changes, this kivy event is called
         and checks if player has collided with an enemy or pellet.
         """
+
         self.__check_pellet_collision()
         self.__check_enemy_collision()
 
     def on_dead(self, instance, value):
         """Check if the player is dead and remove a life if so.
 
-        This is kivy event called when player's dead status changes. If
+        This is Kivy event called when player's dead status changes. If
         the player is dead, powerup and a life is removed and the player
         is set back to not dead.
         """
@@ -417,7 +439,13 @@ class EnemyBeetle(Character):
     Kivy Properties:
     pursuing -- BooleanProperty that indicates which mode the enemy is in
     dormant -- BooleanProperty that indicates whether the enemy is dormant
+    fleeing -- BooleanProperty that indicates whether the enemy is fleeing
+    dead -- BooleanProperty that indicates whether the enemy is dead
+    scatter_length -- NumericProperty representing the length of scatter mode
+    chase_length -- NumericProperty representing the length of chase mode
     mode_change_timer -- the number of seconds the next mode change will be scheduled for
+    mode_change_start -- stores when the last mode change was for pausing it
+    mode_time_remaining -- stores how much time remaining until mode change for resuming it
 
     Public Methods:
     reset_scatter_timers -- reset the mode to scatter and the timer to its initial state
@@ -427,7 +455,6 @@ class EnemyBeetle(Character):
     pursuing = BooleanProperty(False)
     dormant = BooleanProperty(True)
     fleeing = BooleanProperty(False)
-
     dead = BooleanProperty(False)
 
     scatter_length = NumericProperty()
@@ -438,21 +465,35 @@ class EnemyBeetle(Character):
     mode_time_remaining = NumericProperty()
 
     def initialise(self):
-        self._initialise_chase_mode()
-        self._initialise_flee_mode()
+        """Initialise the enemy characters.
+
+        This method performs initialisations specific for the enemies,
+        such as setting their initial modes.
+        performs initialisations relevant to all characters.
+        It should be called when the player dies or a new game/level is
+        started.
+        """
+        self.__initialise_chase_mode()
+        self.__initialise_flee_mode()
         Character.initialise(self)
 
     def reset_character(self):
+        """Reset the enemy characters.
+
+        This method performs the basic initialisations, in addition to
+        things that should only be reset upon starting a new game or
+        level.
+        """
         self.__unschedule_all_timers()
         self.__deactivate()
-        self._initialise_mode_lengths()
+        self.__reset_mode_lengths()
         self._set_start_position()
         self.initialise()
 
     def start_scatter_timer(self):
-        """Reset the mode to scatter and the timer to its initial state.
+        """Reset the scatter/chase timer to its initial state.
 
-        This method resets the pursuing/scatter state and resets the timer.
+        This method resets the pursuing/scatter state timer.
         It should be called when the player dies or a new game/level is started.
         """
 
@@ -461,16 +502,34 @@ class EnemyBeetle(Character):
         Clock.schedule_once(self.__change_mode, self.mode_change_timer)
 
     def start_release_timer(self):
-        """Reset the enemy state to dormant and the activation timer to its inital state.
+        """Reset the activation timer to its initial state.
 
-        This method resets the enemy state to dormant and resets its release timer.
+        This method resets the enemy's release timer.
         It should only be called when a new game or level is started.
         """
 
         Clock.unschedule(self.__activate)
         Clock.schedule_once(self.__activate, self.activation_timer)
 
+    def __initialise_chase_mode(self):
+        """Set chase state to initial value."""
+
+        self.pursuing = False
+
+    def __initialise_flee_mode(self):
+        """Set flee mode to initial value."""
+
+        self.fleeing = False
+
+    def __reset_mode_lengths(self):
+        """Reset the length of the scatter and chase mode."""
+
+        self.scatter_length = self.game.scatter_length
+        self.chase_length = self.game.chase_length
+
     def __unschedule_all_timers(self):
+        """Unschedule all enemy timers."""
+
         Clock.unschedule(self.__activate)
         Clock.unschedule(self.__change_mode)
 
@@ -487,19 +546,29 @@ class EnemyBeetle(Character):
         the enemy is dead.
         """
 
-        beetle_house_center = self.game.level.beetle_house['center'].center
+        beetle_house = self.game.level.beetle_house['center']
+        beetle_house_center = beetle_house.center
         direction_vector =  Vector(beetle_house_center) - Vector(self.center)
         direction_vector = direction_vector.normalize()
 
         if not self.collide_point(*beetle_house_center):
-            self.pos = (direction_vector * self.game.speed_multiplier) + Vector(self.pos)
+            self.pos = (direction_vector * self.speed) + Vector(self.pos)
         else:
             self.center = beetle_house_center
+            # Reset here as rare bug sometimes happens where grid coordinates not set before move
+            self.grid_position = beetle_house.coordinates
             self.dead = False
             self.fleeing = False
 
     def _set_next_direction(self):
-        """Set the next intended movement direction."""
+        """Set the next intended movement direction.
+
+        This method sets the enemies next intended movement direction.
+        It should be called every frame.
+        The chosen movement direction depends on what mode the enemy is
+        in, as well as the enemy's target position.
+        """
+
         if self.dormant:
             current_cell = self.game.level.get_cell(self.grid_position)
             if current_cell.get_edge(self.current_direction).type == level_cell.CellEdgeType.wall:
@@ -518,16 +587,6 @@ class EnemyBeetle(Character):
                 possible_moves = self.__get_possible_moves()
                 best_move = self.__get_shortest_move(possible_moves)
                 self.next_direction = best_move
-
-    def _initialise_chase_mode(self):
-        self.pursuing = False
-
-    def _initialise_flee_mode(self):
-        self.fleeing = False
-
-    def _initialise_mode_lengths(self):
-        self.scatter_length = self.game.scatter_length
-        self.chase_length = self.game.chase_length
 
     def __change_mode(self, dt):
         """Switch enemy between scatter and chase mode.
@@ -549,15 +608,20 @@ class EnemyBeetle(Character):
             Clock.schedule_once(self.__change_mode, self.mode_change_timer)
 
     def __deactivate(self):
+        """Change enemy state to active."""
         self.dormant = True
 
     # Needed to be a method to schedule on Clock
     def __activate(self, dt):
-        """Change enemy state from dormant to active"""
+        """Change enemy state to dormant"""
         self.dormant = False
 
     def __get_possible_moves(self):
-        """Return a list of directions the enemy is allowed to move in."""
+        """Return a list of directions the enemy is allowed to move in.
+
+        This method returns a list of directions the enemy is allowed to
+        move in. The directions are prioritied up-left-down-right.
+        """
 
         # List in this order means priority is up-left-down-right when using directions.pop
         directions = [direction.Direction.right,
@@ -586,11 +650,10 @@ class EnemyBeetle(Character):
             distance = Vector(adjacent_cell_coordinates).distance(self.target_position)
 
             if distance <= shortest_distance or shortest_distance == None:
-                # This ensures that distances are added in both distance order and
-                # priority order (since possible_moves is in priority order)
+                # This ensures that distances are added in both distance order and priority order
                 shortest_distance = distance
                 best_moves.append(move)
-        # Return the shortest move that is the highest priority in up-left-down-right
+        # Returns the shortest move that is the highest priority in up-left-down-right
         return best_moves.pop()
 
     def __get_random_move(self, possible_moves):
@@ -613,7 +676,7 @@ class EnemyBeetle(Character):
         direction to its current direction of travel (unless it is in the beetle house).
 
         Arguments:
-        direction -- direction to be checked (as a direction.Direction)
+        direction -- direction to be checked as a direction.Direction
         """
 
         current_cell = self.game.level.get_cell(self.grid_position)
@@ -671,18 +734,25 @@ class EnemyBeetle(Character):
                 self.game.player.dead = True
 
     def on_fleeing(self, instance, value):
-        """Check if the enemy is fleeing and change its colour.
+        """Check if the enemy is fleeing and change its colour accordingly.
+
+        This Kivy event is called when the enemy's fleeing state changes.
+        It changes the colour accordingly.
         """
 
         if self.fleeing:
-            self.color = (255, 255, 255)
-
+            self.color = (FRIGHTENED_COLOR)
         else:
-            self.color = (255, 0, 0)
+            self.color = (DEFAULT_COLOR)
 
 
     def on_dead(self, instance, value):
-        """Check if the enemy is dead."""
+        """Check if the enemy is dead and play a sound if so.
+
+        This Kivy event is called when the enemy's dead state is
+        changed. If the enemy has changed to dead, a sound is played.
+        """
+
         if self.dead:
             self.game.sounds['retreat'].play()
 
@@ -730,11 +800,8 @@ class PinkBeetle(EnemyBeetle):
     """Store methods and properties specific to the Pink Beetle.
 
     Kivy Properties:
-    color -- ObjectProperty storing the color of the character
     activation_timer -- NumericProperty representing the number of seconds until enemy is released
     """
-
-    activation_timer = NumericProperty(10)
 
     def _set_start_position(self):
         """Set the start position of the enemy.
@@ -775,12 +842,8 @@ class BlueBeetle(EnemyBeetle):
     """Store methods and properties specific to the Blue Beetle.
 
     Kivy Properties:
-    color -- ObjectProperty storing the color of the character
     activation_timer -- NumericProperty representing the number of seconds until enemy is released
     """
-
-    color = ObjectProperty((0, 1, 1))
-    activation_timer = NumericProperty(20)
 
     def _set_start_position(self):
         """Set the start position of the enemy.
@@ -826,14 +889,9 @@ class OrangeBeetle(EnemyBeetle):
     """Store methods and properties specific to the Orange Beetle.
 
     Kivy Properties:
-    color -- ObjectProperty storing the color of the character
     activation_timer -- NumericProperty representing the number of seconds until enemy is released
     flee_distance -- NumericProperty representing the distance from the player the enemy needs to be less than to flee
     """
-
-    color = ObjectProperty((1, 0.5, 0))
-    activation_timer = NumericProperty(30)
-    flee_distance = NumericProperty(4)
 
     def _set_start_position(self):
         """Set the start position of the enemy.

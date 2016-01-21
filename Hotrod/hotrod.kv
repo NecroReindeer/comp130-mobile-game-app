@@ -49,21 +49,26 @@
         RedBeetle:
             id: red_beetle
             game: root_game
+            activation_timer: 0
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
         PinkBeetle:
             id: pink_beetle
             game: root_game
+            activation_timer: 10
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
         BlueBeetle:
             id: blue_beetle
             game: root_game
+            activation_timer: 20
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
         OrangeBeetle:
             id: orange_beetle
             game: root_game
+            flee_distance: 4
+            activation_timer: 30
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
         Level:
@@ -259,10 +264,8 @@
     width: self.parent.width * self.parent.wall_thickness
     pos: (self.parent.pos[0], self.parent.pos[1] - self.parent.height * self.parent.wall_thickness)
 
-
 <Wall>
     canvas:
-
         Color:
             rgb: (0.3, 0.1, 0.1)
         PushMatrix
@@ -273,7 +276,6 @@
             pos: self.pos
             size: self.size
         PopMatrix
-
 
 <Pellet>
     canvas:
@@ -290,7 +292,6 @@
         Ellipse:
             pos: self.pos
             size: self.size
-
 
 <GameOverScreen>
     reset_button: reset
