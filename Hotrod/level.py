@@ -40,6 +40,7 @@ class Level(Widget):
     level_cell.Cell instances (after level generation)
     """
 
+    # Space from the edge of the window that the level is displayed
     padding = NumericProperty()
 
     columns = NumericProperty(8)
@@ -385,10 +386,12 @@ class Level(Widget):
 
     def __get_random_direction(self):
         """Return a random direction.Direction"""
+
         return random.choice(list(direction.Direction))
 
     def __get_random_coordinates(self):
         """Return a random grid coordinate tuple"""
+
         return (random.randrange(0, self.columns), random.randrange(0, self.rows))
 
     def __contains_coordinates(self, (x, y)):

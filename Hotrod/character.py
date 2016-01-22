@@ -19,7 +19,6 @@ from kivy.properties import ObjectProperty
 from kivy.properties import NumericProperty
 from kivy.properties import ReferenceListProperty
 from kivy.properties import BooleanProperty
-from kivy.core.audio import SoundLoader
 from kivy.vector import Vector
 from kivy.clock import Clock
 
@@ -29,7 +28,9 @@ import level_cell
 
 # This makes the source image be its original colours
 DEFAULT_COLOR = (1, 1, 1, 1)
+# Temporary power-up colour
 POWER_COLOR = (1, 1, 0, 1)
+# Temporary frightened colour
 FRIGHTENED_COLOR = (0.5, 0.5, 1, 1)
 
 class Character(Widget):
@@ -67,7 +68,8 @@ class Character(Widget):
     current_direction = ObjectProperty(direction.Direction.right)
     next_direction = ObjectProperty(direction.Direction.right)
 
-    angle = NumericProperty()
+    # Determines the angle the character is displayed
+    orientation = NumericProperty()
 
     def move(self):
         """Move the character.
@@ -85,7 +87,7 @@ class Character(Widget):
 
         self._check_position()
         self._update_direction((previous_position))
-        self._update_position()
+        self._update_grid_position()
 
     def update_character(self):
         """Update the character's size and position relative to the level.
@@ -125,7 +127,7 @@ class Character(Widget):
 
         self.current_direction = direction.Direction.right
         self.next_direction = direction.Direction.right
-        self.angle = self.current_direction.get_angle()
+        self.orientation = self.current_direction.get_angle()
 
     def __initialise_position(self, starting_cell):
         self.grid_position = starting_cell.coordinates
@@ -211,7 +213,7 @@ class Character(Widget):
 
         self.current_direction = self.next_direction
 
-    def _update_position(self):
+    def _update_grid_position(self):
         """Update the stored position of the character.
 
         This method updates the stored position of the character in grid
@@ -221,6 +223,12 @@ class Character(Widget):
         grid_position = self.game.level.convert_to_grid_position(self.center)
         self.grid_position = grid_position
 
+    def _kill_enemy(self):
+        pass
+
+    def _kill_player(self):
+        pass
+
     def on_current_direction(self, instance, value):
         """Ensure that the character rotation is correct.
 
@@ -229,7 +237,7 @@ class Character(Widget):
         the direction changes.
         """
 
-        self.angle = self.current_direction.get_angle()
+        self.orientation = self.current_direction.get_angle()
 
 
 class PlayerBeetle(Character):
@@ -257,7 +265,7 @@ class PlayerBeetle(Character):
     chomp_sound = ObjectProperty()
 
     def initialise(self):
-        """Initialise the plyaer character.
+        """Initialise the player character.
 
         This method performs initialisations specific for the player
         character, such as chomp sound and power-up mode. It also
@@ -328,7 +336,6 @@ class PlayerBeetle(Character):
         self.game.score += self.game.pellet_value
         self.chomp_sound.play()
         self.last_chomp_high = not self.last_chomp_high
-        self.game.pellet_count -= 1
 
     def __activate_powerup(self):
         """Ensure that powerup is activated correctly.
@@ -899,6 +906,7 @@ class OrangeBeetle(EnemyBeetle):
         scatter target if the distance is less than flee_distance.
         The target position is the lower left corner when scattering.
         """
+
         if self.pursuing:
             player_position = self.game.player.grid_position
             distance_from_player = Vector(player_position).distance(self.grid_position)

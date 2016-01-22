@@ -13,7 +13,6 @@ from kivy.properties import StringProperty
 from kivy.vector import Vector
 from kivy.clock import Clock
 from kivy.config import Config
-from kivy.uix.button import Button
 from kivy.core.audio import SoundLoader
 from kivy.core.audio.audio_sdl2 import SoundSDL2
 from kivy.network.urlrequest import UrlRequest
@@ -36,6 +35,7 @@ INITIAL_SCORE = 0
 # Initial level should always be 1
 INITIAL_LEVEL = 1
 
+# Kills start out worth 100 points
 INITIAL_KILL_VALUE = 100
 # Pellets start out worth 10 points
 INITIAL_PELLET_VALUE = 10
@@ -43,12 +43,13 @@ INITIAL_PELLET_VALUE = 10
 INITIAL_POWERUP_COUNT = 6
 # The powerup lasts 10 seconds at the start
 INITIAL_POWERUP_TIME = 10
+# Scatter and chase times are 7 and 15 respectively at the start
 INITIAL_SCATTER_TIME = 7
 INITIAL_CHASE_TIME = 15
 # The movement speed starts at 1
 INITIAL_SPEED_MULTIPLIER = 1
 
-# These are the adjustments applied when the level advances
+# These are the adjustments applied to the respective property when the level advances
 LIVES_BONUS = 1
 SPEED_INCREMENT = 0.1
 CHASE_INCREMENT = 1
@@ -58,6 +59,7 @@ SCATTER_DECREMENT = -1
 POWERUP_TIME_DECREMENT = -1
 POWERUP_COUNT_DECREMENT = -1
 
+# These are the maximum/minimum values the properties can take
 MAX_SPEED_MULTIPLIER = 2
 MAX_PELLET_VALUE = 100
 MIN_SCATTER_LENGTH = 0
@@ -227,7 +229,6 @@ class HotrodGame(Widget):
     lives = NumericProperty(INITIAL_LIVES)
     level_number = NumericProperty(INITIAL_LEVEL)
     player_name = StringProperty()
-    high_scores = StringProperty()
 
     # Game properties
     pellet_count = NumericProperty()
@@ -257,8 +258,11 @@ class HotrodGame(Widget):
     def start(self):
         """Start the game.
 
-        This method begins game progression.
+        This method begins game progression. It ensures that
+        all screens are removed and the title music is stopped,
+        before triggering the play area to start the game.
         """
+
         self.remove_screens()
         self.sounds['title'].stop()
         self.play_area.start_game()
@@ -305,6 +309,8 @@ class HotrodGame(Widget):
 
         Kivy event called when number of lives changes. The play area is reset upon
         losing a life. If all lives are lost, the game over screen is displayed.
+        The restarted level or game over screen isn't shown until the death music
+        has stopped.
         """
 
         # So that this doesn't happen when lives are reset or added after level
@@ -313,11 +319,11 @@ class HotrodGame(Widget):
 
             if self.lives <= 0:
                 game_over_sound = self.sounds['game_over']
-                game_over_sound.bind(on_stop = self.show_game_over_screen)
+                game_over_sound.bind(on_stop=self.show_game_over_screen)
                 self.sounds['game_over'].play()
             else:
                 death_sound = self.sounds['death']
-                death_sound.bind(on_stop = self.play_area.reset_after_death)
+                death_sound.bind(on_stop=self.play_area.reset_after_death)
                 self.sounds['death'].play()
 
     def on_game_active(self, instance, value):
@@ -369,7 +375,14 @@ class HotrodGame(Widget):
             self.screens.remove(screen)
 
     def show_start_screen(self):
-        """Show the start screen."""
+        """Show the start screen.
+
+        This method shows the start screen and plays the title music.
+        It also binds the start screen's button to show the login
+        screen. It ensures that no other screens are displayed by
+        removing them all first.
+        """
+
         self.sounds['title'].play()
         self.remove_screens()
         self.start_screen = user_interface.StartScreen()
@@ -377,7 +390,14 @@ class HotrodGame(Widget):
         self.start_screen.start_button.bind(on_press=self.show_login_screen)
 
     def show_login_screen(self, event):
-        """Show the login screen."""
+        """Show the login screen.
+
+        This method is triggered by a Kivy event.
+        This method shows the login screen and binds the buttons to
+        the appropriate add user/get user methods.
+        It ensures that no other screens are displaying by
+        removing them all first.
+        """
 
         self.remove_screens()
         self.login_screen = user_interface.LoginScreen()
@@ -399,7 +419,8 @@ class HotrodGame(Widget):
         """Check if the user login/addition was successful.
 
         This method checks if the user was added successfully or if
-        an existing player logged in successfully.
+        an existing player logged in successfully. If it was
+        successful, it begins the game.
         """
 
         name = json.loads(results)
@@ -429,13 +450,20 @@ class HotrodGame(Widget):
     def reset(self, event):
         """Reset the game after a game over.
 
-        This method removes the game over widget and resets
-        the score and lives count before restarting the game.
+        This method initialises the game's properties
+         before restarting the game.
         """
+
         self.initialise_properties()
         self.start()
 
     def initialise_properties(self):
+        """Initialise the game's properties.
+
+        This method sets all of the game's properties to their
+        initial values, as defined by the relative constants.
+        """
+
         self.level_number = INITIAL_LEVEL
         self.score = INITIAL_SCORE
         self.lives = INITIAL_LIVES
@@ -464,6 +492,13 @@ class HotrodGame(Widget):
         self.start()
 
     def increase_difficulty(self):
+        """Increase the difficulty.
+
+        This method increases the difficulty by adjusting the values
+        of the relevant properties by the defined increment, until they
+        will exceed their maximum or minimum values.
+        """
+
         if self.speed_multiplier <= MAX_SPEED_MULTIPLIER - SPEED_INCREMENT:
             self.speed_multiplier += SPEED_INCREMENT
         if self.scatter_length >= MIN_SCATTER_LENGTH - SCATTER_DECREMENT:
@@ -476,11 +511,6 @@ class HotrodGame(Widget):
         self.chase_length += CHASE_INCREMENT
         self.pellet_value += PELLET_VALUE_INCREMENT
         self.kill_value += KILL_VALUE_INCREMENT
-
-        print "chase: " + str(self.chase_length)
-        print "scatter: " + str(self.scatter_length)
-        print "speed:" + str(self.speed_multiplier)
-        print "power: " + str(self.powerup_length)
 
     def on_level_number(self, instance, value):
         # Difficulty increased after level 1
@@ -498,7 +528,7 @@ class HotrodApp(App):
     game = ObjectProperty(None)
 
     def build(self):
-        #Config.set('graphics', 'fullscreen', 'auto')
+        Config.set('graphics', 'fullscreen', 'auto')
         self.game = HotrodGame()
         return self.game
 

@@ -148,6 +148,7 @@ class Cell(Widget):
 
         self.remove_widget(self.pellet)
         self.pellet_exists = False
+        self.parent.game.pellet_count -= 1
 
 
 class CellEdge(Widget):
