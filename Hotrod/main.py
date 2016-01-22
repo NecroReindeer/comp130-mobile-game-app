@@ -528,7 +528,7 @@ class HotrodApp(App):
     game = ObjectProperty(None)
 
     def build(self):
-        Config.set('graphics', 'fullscreen', 'auto')
+        #Config.set('graphics', 'fullscreen', 'auto')
         self.game = HotrodGame()
         return self.game
 

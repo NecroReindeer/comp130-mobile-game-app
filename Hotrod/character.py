@@ -274,6 +274,7 @@ class PlayerBeetle(Character):
 
         self.__initialise_chomp_sound()
         self.__initialise_states()
+        self.__initialise_bindings()
         Character.initialise(self)
 
     def __initialise_chomp_sound(self):
@@ -289,6 +290,11 @@ class PlayerBeetle(Character):
         self.powered_up = False
         self.dead = False
 
+    def __initialise_bindings(self):
+        for enemy in self.game.enemies:
+            self.bind(powered_up=enemy.switch_frightened_state)
+        #self.bind(grid_position=self.game.play_area.check_character_collisions)
+
     def __check_pellet_collision(self):
         """Check for pellet collision.
 
@@ -300,8 +306,6 @@ class PlayerBeetle(Character):
         if current_cell.pellet_exists:
             if current_cell.pellet.type == collectable.PelletType.power:
                 self.__activate_powerup()
-                # Here so that new enemies still get frightened after additional pellets
-                self.__frighten_enemies()
                 # Here so that it still plays if you collect another
                 self.game.sounds['power_up'].play()
             self.__eat_pellet(current_cell)
@@ -340,11 +344,11 @@ class PlayerBeetle(Character):
     def __activate_powerup(self):
         """Ensure that powerup is activated correctly.
 
-        This method fully activates the powerup, by changing the
-        player colour and scheduling the method that removes the
-        powerup for the appropriate amount of time.
+        This method fully activates the powerup, by scheduling
+        the method that removes the powerup for the appropriate amount of time.
         """
 
+        # Unschedule remove powerup so that full length of additional pellets is experienced
         Clock.unschedule(self.__remove_powerup)
         self.powered_up = True
         Clock.schedule_once(self.__remove_powerup, self.game.powerup_length)
@@ -357,22 +361,6 @@ class PlayerBeetle(Character):
         """
 
         self.powered_up = False
-        for enemy in self.game.enemies:
-            enemy.fleeing = False
-            enemy.resume_mode_change()
-
-    def __frighten_enemies(self):
-        """Set the enemies to fleeing.
-
-        This method sets all of the active enemies to fleeing
-        and pauses their ordinary mode changes.
-        """
-
-        for enemy in self.game.enemies:
-            # Done here as want to pause for all enemies even if not fleeing
-            enemy.pause_mode_change()
-            if self.game.level.get_cell(enemy.grid_position) not in self.game.level.beetle_house.itervalues():
-                enemy.fleeing = True
 
     def on_powered_up(self, instance, value):
         """Activate and deactivate the powerup.
@@ -384,14 +372,14 @@ class PlayerBeetle(Character):
 
         if self.powered_up:
             # Only these are to be done on initial collection
-            self.color = (POWER_COLOR)
+            self.color = POWER_COLOR
             if self.game.sounds['frightened'].state == 'stop':
                 self.game.sounds['frightened'].loop = True
                 self.game.sounds['frightened'].play()
         else:
             # So that these are still reset on death
             self.game.sounds['frightened'].stop()
-            self.color = (DEFAULT_COLOR)
+            self.color = DEFAULT_COLOR
 
     def on_last_chomp_high(self, instance, value):
         """Alternate the chomp sound.
@@ -466,6 +454,7 @@ class EnemyBeetle(Character):
 
     mode_change_start = NumericProperty()
     mode_time_remaining = NumericProperty()
+    mode_change_paused = BooleanProperty(False)
 
     def initialise(self):
         """Initialise the enemy characters.
@@ -476,6 +465,8 @@ class EnemyBeetle(Character):
         It should be called when the player dies or a new game/level is
         started.
         """
+
+        self.__initialise_bindings()
         self.__initialise_chase_mode()
         self.__initialise_flee_mode()
         Character.initialise(self)
@@ -487,6 +478,7 @@ class EnemyBeetle(Character):
         things that should only be reset upon starting a new game or
         level.
         """
+
         self.__unschedule_all_timers()
         self.__deactivate()
         self.__reset_mode_lengths()
@@ -524,6 +516,9 @@ class EnemyBeetle(Character):
 
         self.fleeing = False
 
+    def __initialise_bindings(self):
+       pass
+
     def __reset_mode_lengths(self):
         """Reset the length of the scatter and chase mode."""
 
@@ -549,17 +544,17 @@ class EnemyBeetle(Character):
         the enemy is dead.
         """
 
-        beetle_house = self.game.level.beetle_house['center']
-        beetle_house_center = beetle_house.center
-        direction_vector =  Vector(beetle_house_center) - Vector(self.center)
+        beetle_den_center = self.game.level.beetle_den['center']
+        beetle_den_center_coords = beetle_den_center.center
+        direction_vector = Vector(beetle_den_center_coords) - Vector(self.center)
         direction_vector = direction_vector.normalize()
 
-        if not self.collide_point(*beetle_house_center):
+        if not self.collide_point(*beetle_den_center_coords):
             self.pos = (direction_vector * self.speed) + Vector(self.pos)
         else:
-            self.center = beetle_house_center
+            self.center = beetle_den_center_coords
             # Reset here as rare bug sometimes happens where grid coordinates not set before move
-            self.grid_position = beetle_house.coordinates
+            self.grid_position = beetle_den_center.coordinates
             self.dead = False
             self.fleeing = False
 
@@ -582,8 +577,8 @@ class EnemyBeetle(Character):
             self.next_direction = self.__get_random_move(possible_moves)
 
         else:
-            if self.game.level.get_cell(self.grid_position) == self.game.level.beetle_house['center']:
-                self.target_position = self.game.level.beetle_house['center'].coordinates + Vector(0, 1)
+            if self.game.level.get_cell(self.grid_position) == self.game.level.beetle_den['center']:
+                self.target_position = self.game.level.beetle_den['center'].coordinates + Vector(0, 1)
                 self.next_direction = direction.Direction.up
             else:
                 self.target_position = self._get_target_position()
@@ -599,6 +594,7 @@ class EnemyBeetle(Character):
         After the mode is changed, the timer for this method being called again
         is set depending on the mode that the enemy is now in.
         """
+
         self.pursuing = not self.pursuing
         self.current_direction = self.current_direction.get_opposite()
         self.mode_change_start = Clock.get_time()
@@ -609,6 +605,8 @@ class EnemyBeetle(Character):
         else:
             self.mode_change_timer = self.scatter_length
             Clock.schedule_once(self.__change_mode, self.mode_change_timer)
+
+        print self, "New mode: ", self.pursuing, Clock.get_time()
 
     def __deactivate(self):
         """Change enemy state to active."""
@@ -688,7 +686,7 @@ class EnemyBeetle(Character):
             return False
         elif direction == self.current_direction.get_opposite():
             # If enemy is in the beetle house, opposite direction is allowed
-            if self.game.level.get_cell(self.grid_position) in self.game.level.beetle_house.itervalues():
+            if self.game.level.get_cell(self.grid_position) in self.game.level.beetle_den.itervalues():
                 return True
             else:
                 return False
@@ -704,12 +702,16 @@ class EnemyBeetle(Character):
 
         Clock.unschedule(self.__change_mode)
         pause_time = Clock.get_time()
+
+        print "Pausing at ", str(pause_time)
         time_into_mode = pause_time - self.mode_change_start
 
         if self.pursuing:
             self.mode_time_remaining = self.chase_length - time_into_mode
         elif not self.pursuing:
             self.mode_time_remaining = self.scatter_length - time_into_mode
+
+        self.mode_change_paused = True
 
     def resume_mode_change(self):
         """Resume the mode change timers.
@@ -718,7 +720,32 @@ class EnemyBeetle(Character):
         be called when the enemies stop being frightened.
         """
 
+        print "Resuming at ", str(Clock.get_time())
+
         Clock.schedule_once(self.__change_mode, self.mode_time_remaining)
+        self.mode_change_paused = False
+
+    def switch_frightened_state(self, instance, value):
+        """Switch the frightened state.
+
+        This Kivy event should be called when the players powered-up state
+        has changed or a cell containing a power pellet's pellet existence
+        state changes.
+        This method switches the enemies' frightened states to correspond
+        with the players powered up state and pauses/resumes regular scatter/chase
+        mode changes accordingly.
+        """
+
+        if self.game.player.powered_up:
+            if self.game.level.get_cell(self.grid_position) not in self.game.level.beetle_den.itervalues():
+                self.fleeing = True
+            # Paused here rather than in on_fleeing as all enemies need pausing
+            self.pause_mode_change()
+        else:
+
+            self.fleeing = False
+            # Resumed here rather than in on_fleeing as should only happen when powerup wears off
+            self.resume_mode_change()
 
     def on_grid_position(self, instance, value):
         """Check for collision with player on grid position change.
@@ -775,10 +802,10 @@ class RedBeetle(EnemyBeetle):
         """Set the start position of the enemy.
 
         This method sets the start position of the enemy.
-        The red beetle starts in the center of the beetle house.
+        The red beetle starts in the center of the beetle den.
         The start position for enemies cannot be set in the kv
         file as it is dynamic."""
-        self.start_position = self.game.level.beetle_house['center'].coordinates
+        self.start_position = self.game.level.beetle_den['center'].coordinates
 
     def _get_target_position(self):
         """Determine and return the target position.
@@ -808,12 +835,12 @@ class PinkBeetle(EnemyBeetle):
         """Set the start position of the enemy.
 
         This method sets the start position of the enemy.
-        The pink beetle starts in the center of the beetle house.
+        The pink beetle starts in the center of the beetle den.
         The start position for enemies cannot be set in the kv
         file as it is dynamic.
         """
 
-        self.start_position = self.game.level.beetle_house['center'].coordinates
+        self.start_position = self.game.level.beetle_den['center'].coordinates
 
     def _get_target_position(self):
         """Determine and return the target position
@@ -847,12 +874,12 @@ class BlueBeetle(EnemyBeetle):
         """Set the start position of the enemy.
 
         This method sets the start position of the enemy.
-        The blue beetle starts at the right of the beetle house.
+        The blue beetle starts at the right of the beetle den.
         The start position for enemies cannot be set in the kv
         file as it is dynamic.
         """
 
-        self.start_position = self.game.level.beetle_house['right'].coordinates
+        self.start_position = self.game.level.beetle_den['right'].coordinates
 
     def _get_target_position(self):
         """Determine and return the target position
@@ -890,12 +917,12 @@ class OrangeBeetle(EnemyBeetle):
         """Set the start position of the enemy.
 
         This method sets the start position of the enemy.
-        The orange beetle starts at the left of the beetle house.
+        The orange beetle starts at the left of the beetle den.
         The start position for enemies cannot be set in the kv
         file as it is dynamic.
         """
 
-        self.start_position = self.game.level.beetle_house['left'].coordinates
+        self.start_position = self.game.level.beetle_den['left'].coordinates
 
     def _get_target_position(self):
         """Determine and return the target position

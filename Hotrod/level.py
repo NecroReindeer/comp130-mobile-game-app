@@ -50,7 +50,7 @@ class Level(Widget):
     cells = ListProperty()
     cell_size = ObjectProperty()
 
-    beetle_house = {}
+    beetle_den = {}
 
     def generate_level(self):
         """Generate and set up a level.
@@ -287,9 +287,9 @@ class Level(Widget):
         left_cell = self.get_adjacent_cell(center_cell, direction.Direction.left)
         right_cell = self.get_adjacent_cell(center_cell, direction.Direction.right)
 
-        self.beetle_house['center'] = center_cell
-        self.beetle_house['left'] = left_cell
-        self.beetle_house['right'] = right_cell
+        self.beetle_den['center'] = center_cell
+        self.beetle_den['left'] = left_cell
+        self.beetle_den['right'] = right_cell
 
         self.__set_den_edges()
         self.__remove_walls_around_den()
@@ -307,11 +307,11 @@ class Level(Widget):
         This method ensures that the edges of the beetle den are set up correctly.
         The beetle den is enclosed with a one-way exit at the top of the center cell.
         """
-        den_center = self.beetle_house['center']
+        den_center = self.beetle_den['center']
 
         self.__set_cell_edges(den_center, (direction.Direction.down, direction.Direction.up))
-        self.__set_cell_edges(self.beetle_house['left'], (direction.Direction.up, direction.Direction.down, direction.Direction.left))
-        self.__set_cell_edges(self.beetle_house['right'], (direction.Direction.up, direction.Direction.down, direction.Direction.right))
+        self.__set_cell_edges(self.beetle_den['left'], (direction.Direction.up, direction.Direction.down, direction.Direction.left))
+        self.__set_cell_edges(self.beetle_den['right'], (direction.Direction.up, direction.Direction.down, direction.Direction.right))
 
         # Manually set top edge of den_center in order to create one-way passage
         den_center.get_edge(direction.Direction.up).type = level_cell.CellEdgeType.passage
@@ -323,11 +323,11 @@ class Level(Widget):
         of the enemy den. This is both to guarantee there are no dead ends around it,
         and reduce difficulty by allowing the player to move freely when near the enemy den.
         """
-        for cell in self.beetle_house.itervalues():
+        for cell in self.beetle_den.itervalues():
             for dir in direction.Direction:
                 adjacent_cell = self.get_adjacent_cell(cell, dir)
 
-                if adjacent_cell not in self.beetle_house.itervalues():
+                if adjacent_cell not in self.beetle_den.itervalues():
                     if dir == direction.Direction.up or dir == direction.Direction.down:
                         for edge_dir in direction.Direction.left, direction.Direction.right:
                             try:
@@ -374,15 +374,19 @@ class Level(Widget):
                  cell.initialise_pellets()
 
     def __add_powerups(self):
+        """Add powerups to random cells.
+
+        This method chooses cells to add powerups to randomly
+        until the maximum powerup count has been reached.
+        """
+
         powerup_count = 0
         while powerup_count < self.game.powerup_limit:
             coordinates = self.__get_random_coordinates()
             cell = self.get_cell(coordinates)
-            if (cell.pellet_exists and
-                        cell.pellet.type is not collectable.PelletType.power):
-
-                cell.pellet.type = collectable.PelletType.power
-                powerup_count +=1
+            if cell.pellet_exists and cell.pellet.type is not collectable.PelletType.power:
+                cell.add_power_pellet()
+                powerup_count += 1
 
     def __get_random_direction(self):
         """Return a random direction.Direction"""

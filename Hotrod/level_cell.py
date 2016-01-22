@@ -104,7 +104,7 @@ class Cell(Widget):
                 edges.remove(random_edge)
 
     def get_walls(self):
-        """Return a list of edges that are walls"""
+        """Return a list of the cell's edges that are walls."""
 
         walls = []
         for edge in self.edges:
@@ -133,10 +133,15 @@ class Cell(Widget):
             self.pellet.update_pellet_widget()
 
     def initialise_pellets(self):
-        """Set the type of the pellet in the cell."""
+        """Set the type of the pellet in the cell.
 
-        if (self in self.parent.beetle_house.itervalues() or
-                    self.coordinates == self.parent.game.player.start_position):
+        This method sets up the pellet contained in the cell.
+        If the cell is in the beetle den or player start position,
+        the cell's pellet is removed. Otherwise, the pellet type
+        is assigned and the game's pellet count is increased.
+        """
+
+        if self in self.parent.beetle_den.itervalues() or self.coordinates == self.parent.game.player.start_position:
             self.remove_pellet()
         else:
             self.pellet.type = collectable.PelletType.normal
@@ -144,11 +149,29 @@ class Cell(Widget):
             self.parent.game.pellet_count += 1
 
     def remove_pellet(self):
-        """Remove the pellet from the cell"""
+        """Remove the pellet from the cell.
+
+        This method removes the pellet from the cell and sets the
+        cell's pellet existence to false. It also decreases the games
+        current pellet count.
+        """
 
         self.remove_widget(self.pellet)
         self.pellet_exists = False
         self.parent.game.pellet_count -= 1
+
+    def add_power_pellet(self):
+        """Set the type of pellet in the cell to power pellet.
+
+        This method sets the type of pellet the cell contains to a power pellet.
+        It also binds the pellet's existence to the enemies' frightened state, so
+        that remaining enemies still become frightened if the player collects an
+        additional power up whilst powered up.
+        """
+
+        self.pellet.type = collectable.PelletType.power
+        for enemy in self.parent.game.enemies:
+            self.bind(pellet_exists=enemy.switch_frightened_state)
 
 
 class CellEdge(Widget):
