@@ -98,31 +98,31 @@
             HUDText:
                 id: name
                 game: root_game
-                pos_hint: {'x': 0.1, 'top': 1}
+                pos_hint: {'x': 0.1, 'top': 0.9}
                 text: "Name: " + str(self.game.player_name)
 
             HUDText:
                 id: level
                 game: root_game
-                pos_hint: {'x': 0.1, 'top': 0.95}
+                pos_hint: {'x': 0.1, 'top': 0.8}
                 text: "Level: " + str(self.game.level_number)
 
             HUDText:
                 id: level
                 game: root_game
-                pos_hint: {'x': 0.1, 'top': 0.9}
+                pos_hint: {'x': 0.1, 'top': 0.7}
                 text: "Speed: " + str(self.game.speed_multiplier)
 
             HUDText:
                 id: lives
                 game: root_game
-                pos_hint: {'x': 0.1, 'top': 0.85}
+                pos_hint: {'x': 0.1, 'top': 0.6}
                 text: "Lives: " + str(self.game.lives)
 
             HUDText:
                 id: score
                 game: root_game
-                pos_hint: {'x': 0.1, 'top': 0.8}
+                pos_hint: {'x': 0.1, 'top': 0.5}
                 text: "Score: " + str(self.game.score)
 
 <Cell>
@@ -174,7 +174,6 @@
 
 
 <RedBeetle>
-    target: red_target
     canvas:
         Color:
             rgba: self.color
@@ -189,14 +188,8 @@
             size: self.size
         PopMatrix
 
-    Target:
-        id: red_target
-        size: self.parent.size
-        color: self.parent.color
-
 
 <PinkBeetle>
-    target: pink_target
     canvas:
         Color:
             rgba: self.color
@@ -211,14 +204,8 @@
             size: self.size
         PopMatrix
 
-    Target:
-        id: pink_target
-        size: self.parent.size
-        color: self.parent.color
-
 
 <BlueBeetle>
-    target: blue_target
     canvas:
         Color:
             rgba: self.color
@@ -233,13 +220,8 @@
             size: self.size
         PopMatrix
 
-    Target:
-        id: blue_target
-        size: self.parent.size
-        color: self.parent.color
 
 <OrangeBeetle>
-    target: orange_target
     canvas:
         Color:
             rgba: self.color
@@ -254,15 +236,12 @@
             size: self.size
         PopMatrix
 
-    Target:
-        id: orange_target
-        size: self.parent.size
-        color: self.parent.color
 
 <CellEdge>
     height: self.parent.height + (2 * self.parent.height * self.parent.wall_thickness)
     width: self.parent.width * self.parent.wall_thickness
     pos: (self.parent.pos[0], self.parent.pos[1] - self.parent.height * self.parent.wall_thickness)
+
 
 <Wall>
     canvas:
@@ -278,14 +257,6 @@
         PopMatrix
 
 <Pellet>
-    canvas:
-        Color:
-            rgb: self.color
-        Ellipse:
-            pos: self.pos
-            size: self.size
-
-<Target>
     canvas:
         Color:
             rgb: self.color
@@ -353,7 +324,9 @@
             HUDText:
                 id: high_scores
                 halign: 'center'
-                pos_hint: {'center_x': 0.5, 'top': 0.7}
+                pos_hint: {'center_x': 0.5, 'top': 0.6}
+                # It just works
+                font_size: self.width / 20
                 text: ' '
 
 <StartScreen>
@@ -395,8 +368,7 @@
     new_button: new
     existing_button: existing
     instruction_text: instruction
-    new_name_text: new_name
-    existing_name_text: existing_name
+    name_text: name
 
     FloatLayout:
         canvas:
@@ -412,21 +384,23 @@
             font_size: self.width / len(self.text) * 2
 
         BoxLayout:
-            orientation: 'horizontal'
+            orientation: 'vertical'
             pos_hint: {'center_x': 0.5, 'top': 0.5}
             size_hint_x: 1
             size_hint_y: 0.5
 
+            NameInput:
+                id: name
+                hint_text: "name"
+                pos_hint: {'center_x': 0.5, 'top': 1}
+                size_hint: (0.5, 1)
+
             BoxLayout:
-                orientation: 'vertical'
-                NameInput:
-                    id: new_name
-                    focus: True
-                    size_hint: (1, 0.2)
+                orientation: 'horizontal'
 
                 Button:
                     id: new
-                    size_hint: (1, 0.2)
+                    size_hint: (1, 1)
                     background_normal: ''
                     background_color: (0.9, 0, 0, 1)
 
@@ -434,15 +408,9 @@
                     color: (0, 0, 0, 1)
                     text: "New user"
 
-            BoxLayout:
-                orientation: 'vertical'
-                NameInput:
-                    id: existing_name
-                    size_hint: (1, 0.2)
-
                 Button:
                     id: existing
-                    size_hint: (1, 0.2)
+                    size_hint: (1, 1)
                     background_normal: ''
                     background_color: (0.9, 0.9, 0, 1)
 
@@ -451,7 +419,6 @@
                     text: "Log in"
 
 <NameInput>
-    text: "AAA"
     multiline: False
     cursor_color: (1, 0, 0, 1)
     background_color: (0, 0, 0, 1)
@@ -469,6 +436,7 @@
     size_hint_y: None
     color: (0.9, 0.9, 0, 1)
     text_size: self.width, None
+    font_size: self.width / 8
     height: self.texture_size[1]
 
 <TitleText>

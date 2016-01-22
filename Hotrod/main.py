@@ -227,6 +227,7 @@ class HotrodGame(Widget):
     lives = NumericProperty(INITIAL_LIVES)
     level_number = NumericProperty(INITIAL_LEVEL)
     player_name = StringProperty()
+    high_scores = StringProperty()
 
     # Game properties
     pellet_count = NumericProperty()
@@ -328,14 +329,9 @@ class HotrodGame(Widget):
         updates are unscheduled.
 
         The game should deactivate in the following situations:
-        Lose a life
-        Getting a game over
-        Advancing to the next level
-
+        Lose a life, getting a game over, or advancing to the next level
         It should be restarted when:
-        Next level has begun
-        New game has begun
-        After positions have reset after death
+        Next level has begun, new game has begun, or after positions have reset after death
         """
 
         if self.game_active:
@@ -390,66 +386,28 @@ class HotrodGame(Widget):
         self.login_screen.existing_button.bind(on_press=self.get_user)
 
     def add_user(self, event):
-        name = self.login_screen.new_name_text.text
-        UrlRequest('http://bsccg02.ga.fal.io/adduser.py?player=' + name , self.check_added_user)
-        self.login_screen.instruction_text.text = "Trying to add player..."
+        name = self.login_screen.name_text.text
+        UrlRequest('http://bsccg02.ga.fal.io/adduser.py?player=' + name , self.check_user)
+        self.login_screen.instruction_text.text = "Adding player..."
 
-    def check_added_user(self, request, results):
+    def get_user(self, event):
+        name = self.login_screen.name_text.text
+        UrlRequest('http://bsccg02.ga.fal.io/getuser.py?player=' + name, self.check_user)
+        self.login_screen.instruction_text.text = "Logging in..."
+
+    def check_user(self, request, results):
+        """Check if the user login/addition was successful.
+
+        This method checks if the user was added successfully or if
+        an existing player logged in successfully.
+        """
+
         name = json.loads(results)
         if name is None:
             self.login_screen.instruction_text.text = "Invalid name!"
         else:
             self.player_name = name
             self.start()
-
-    def get_user(self, event):
-        name = self.login_screen.existing_name_text.text
-        print name
-        UrlRequest('http://bsccg02.ga.fal.io/getuser.py?player=' + name, self.check_existing_user)
-        self.login_screen.instruction_text.text = "Trying to log in..."
-
-    def check_existing_user(self, request, results):
-        name = json.loads(results)
-        if name is None:
-            self.login_screen.instruction_text.text = "Invalid name or player doesn't exist!"
-        else:
-            self.player_name = name
-            self.start()
-
-    def get_best_score(self):
-        UrlRequest('http://bsccg02.ga.fal.io/getbest.py?player=' + self.player_name + '&level=' + str(self.level_number), self.upload_score)
-
-    def get_high_scores(self):
-        UrlRequest('http://bsccg02.ga.fal.io/getscores.py?level=' + str(self.level_number), self.show_high_scores)
-
-    def show_high_scores(self, request, results):
-        high_scores = json.loads(results)
-        text = ''
-        for entry in high_scores:
-            name, level, score = entry
-            self.game_over_screen.level_number_text.text = level
-            text = text + name + ": " + str(score) + "\n"
-            self.game_over_screen.high_scores_text.text = text
-
-    def upload_score(self, request, results):
-        current_best = json.loads(results)
-        self.game_over_screen.best_score_text.text = "Personal best: " + str(current_best)
-        if current_best is None:
-            self.submit_high_score()
-            self.game_over_screen.best_score_text.text = "New personal best!"
-        elif self.score > current_best:
-            self.update_high_score()
-            self.game_over_screen.best_score_text.text = "New personal best!"
-        else:
-            return
-
-    def submit_high_score(self):
-        UrlRequest('http://bsccg02.ga.fal.io/submitscore.py?player=' + self.player_name +
-                   '&level=' + str(self.level_number) + '&score=' + str(self.score), )
-
-    def update_high_score(self):
-        UrlRequest('http://bsccg02.ga.fal.io/updatescore.py?player=' + self.player_name +
-                   '&level=' + str(self.level_number) + '&score=' + str(self.score), )
 
     def show_game_over_screen(self, event):
         """Show the game over screen and high scores.
@@ -460,11 +418,12 @@ class HotrodGame(Widget):
         is pressed.
         """
 
+        self.sounds['title'].play()
         self.game_over_screen = user_interface.GameOverScreen()
         self.show_screen(self.game_over_screen)
-        self.game_over_screen.player_score_text.text = "Score: " + str(self.score)
-        self.get_best_score()
-        self.get_high_scores()
+        self.game_over_screen.show_score(self.score)
+        self.game_over_screen.show_best(self.player_name, self.level_number, self.score)
+        self.game_over_screen.show_high_scores(self.level_number)
         self.game_over_screen.reset_button.bind(on_press=self.reset)
 
     def reset(self, event):
@@ -499,6 +458,7 @@ class HotrodGame(Widget):
         """
 
         self.game_active = False
+        # Increase level and lives by 1
         self.level_number += 1
         self.lives += 1
         self.start()
@@ -523,6 +483,7 @@ class HotrodGame(Widget):
         print "power: " + str(self.powerup_length)
 
     def on_level_number(self, instance, value):
+        # Difficulty increased after level 1
         if self.level_number != 1:
             self.increase_difficulty()
 
@@ -537,7 +498,7 @@ class HotrodApp(App):
     game = ObjectProperty(None)
 
     def build(self):
-     #   Config.set('graphics', 'fullscreen', 'auto')
+        #Config.set('graphics', 'fullscreen', 'auto')
         self.game = HotrodGame()
         return self.game
 

@@ -26,7 +26,6 @@ from kivy.clock import Clock
 import collectable
 import direction
 import level_cell
-import test
 
 # This makes the source image be its original colours
 DEFAULT_COLOR = (1, 1, 1, 1)
@@ -313,7 +312,6 @@ class PlayerBeetle(Character):
                 if enemy.grid_position == self.grid_position:
                     # Enemy still kills you if it's not scared
                     if self.powered_up and enemy.fleeing:
-                        self.game.score += self.game.kill_value
                         enemy.dead = True
                     elif not enemy.dead:
                         self.dead = True
@@ -367,7 +365,6 @@ class PlayerBeetle(Character):
             # Done here as want to pause for all enemies even if not fleeing
             enemy.pause_mode_change()
             if self.game.level.get_cell(enemy.grid_position) not in self.game.level.beetle_house.itervalues():
-                print enemy, enemy.grid_position
                 enemy.fleeing = True
 
     def on_powered_up(self, instance, value):
@@ -423,7 +420,6 @@ class PlayerBeetle(Character):
         if self.dead:
             self.powered_up = False
             self.game.lives -= 1
-            self.dead = False
         else:
             # Do nothing if set to alive
             pass
@@ -754,6 +750,7 @@ class EnemyBeetle(Character):
         """
 
         if self.dead:
+            self.game.score += self.game.kill_value
             self.game.sounds['retreat'].play()
 
 class RedBeetle(EnemyBeetle):
@@ -784,14 +781,11 @@ class RedBeetle(EnemyBeetle):
         The target position is the upper right corner when scattering.
         """
         if self.pursuing:
-            # For testing purposes
-            self.target.pos = self.game.level.convert_to_window_position(self.game.player.grid_position)
             # Target position is always player's position
             return self.game.player.grid_position
         else:
             # Upper right corner
             target_position = (self.game.level.columns + 1, self.game.level.rows + 1)
-            self.target.pos = self.game.level.convert_to_window_position(target_position)
             return target_position
 
 
@@ -828,13 +822,10 @@ class PinkBeetle(EnemyBeetle):
             player_direction_vector = self.game.player.current_direction.value
             # Target position is the 2 cells ahead of the player
             target_position = Vector(player_position) + 2 * player_direction_vector
-            # For testing purposes
-            self.target.pos = self.game.level.convert_to_window_position(target_position)
             return target_position
         else:
             # Upper left corner
             target_position = (-1, self.game.level.rows + 1)
-            self.target.pos = self.game.level.convert_to_window_position(target_position)
             return target_position
 
 class BlueBeetle(EnemyBeetle):
@@ -870,17 +861,12 @@ class BlueBeetle(EnemyBeetle):
             player_direction_vector = self.game.player.current_direction.value
             space_ahead_of_player = Vector(player_position) + 2 * player_direction_vector
             red_beetle_position = self.game.red_enemy.grid_position
-
-            # Target position is double the vector between 2 spaces ahead of the
-            # player and the red beetle
+            # Target position is double the vector between 2 spaces ahead of the player and the red beetle
             target_position = 2 * Vector(space_ahead_of_player) - Vector(red_beetle_position)
-            # For testing purposes
-            self.target.pos = self.game.level.convert_to_window_position(target_position)
             return target_position
         else:
             # Bottom right
             target_position = (self.game.level.columns + 1, -1)
-            self.target.pos = self.game.level.convert_to_window_position(target_position)
             return target_position
 
 
@@ -923,13 +909,10 @@ class OrangeBeetle(EnemyBeetle):
             else:
                 # Target position is bottom left corner if player is within 4 tiles
                 target_position = -1, -1
-            # For testing purposes
-            self.target.pos = self.game.level.convert_to_window_position(target_position)
             return target_position
         else:
             # Bottom left
             target_position = (-1, -1)
-            self.target.pos = self.game.level.convert_to_window_position(target_position)
             return target_position
 
 
