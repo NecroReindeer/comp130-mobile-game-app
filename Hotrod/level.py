@@ -398,7 +398,7 @@ class Level(Widget):
     def __get_random_coordinates(self):
         """Return a random grid coordinate tuple"""
 
-        return (random.randrange(0, self.columns), random.randrange(0, self.rows))
+        return (random.randrange(self.columns), random.randrange(self.rows))
 
     def __contains_coordinates(self, (x, y)):
         """Check if the level grid contains the given coordinates.
@@ -409,6 +409,7 @@ class Level(Widget):
         Arguments:
         (x, y) -- grid coordinates as a tuple
         """
+
         if 0 <= x < self.columns and 0 <= y < self.rows:
             return True
 

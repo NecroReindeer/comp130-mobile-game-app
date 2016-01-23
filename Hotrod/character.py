@@ -12,8 +12,10 @@ BlueBeetle(EnemyBeetle) -- class for the blue beetle enemy
 OrangeBeetle(EnemyBeetle) -- class for the orange beetle enemy
 """
 
+# Standard python libraries
 import random
 
+# Kivy modules
 from kivy.uix.widget import Widget
 from kivy.properties import ObjectProperty
 from kivy.properties import NumericProperty
@@ -23,9 +25,14 @@ from kivy.properties import StringProperty
 from kivy.vector import Vector
 from kivy.clock import Clock
 
+# Own modules
 import collectable
 import direction
 import level_cell
+
+
+# Time that the character will start flashing before powerup ends in seconds
+POWERUP_END_WARNING_TIME = 0.5
 
 
 class Character(Widget):
@@ -288,13 +295,17 @@ class PlayerBeetle(Character):
 
         This method fully activates the powerup, by scheduling
         the method that removes the powerup for the appropriate amount of time.
+        It also schedules the method that makes the player character flash
+        when the powerup is about to run out.
         """
 
         # Unschedule remove powerup so that full length of additional pellets is experienced
         Clock.unschedule(self.__remove_powerup)
+        Clock.unschedule(self.__indicate_powerup_end)
         self.game.sounds['power_up'].play()
         self.powered_up = True
         Clock.schedule_once(self.__remove_powerup, self.game.powerup_length)
+        Clock.schedule_once(self.__indicate_powerup_end, self.game.powerup_length - POWERUP_END_WARNING_TIME)
 
     def __initialise_chomp_sound(self):
         """Initialise the chomp sound.
@@ -356,6 +367,22 @@ class PlayerBeetle(Character):
 
         # This is in a method so that it can be scheduled
         self.powered_up = False
+
+    def __indicate_powerup_end(self, dt):
+        """Indicate that the powerup is about to end.
+
+        This method is scheduled on the Kivy clock and makes the
+        player character flash between its powered up and normal
+        image until the power up ends.
+        """
+
+        if self.powered_up:
+            if self.source_image == self.normal_image:
+                self.source_image = self.power_image
+
+            elif self.source_image == self.power_image:
+                self.source_image = self.normal_image
+            Clock.schedule_once(self.__indicate_powerup_end, 0.1)
 
     def on_powered_up(self, instance, value):
         """Activate and deactivate the powerup.
@@ -434,6 +461,7 @@ class EnemyBeetle(Character):
     mode_time_remaining -- stores how much time remaining until mode change for resuming it
 
     Public Methods:
+    move -- move the enemy.
     reset_scatter_timers -- reset the mode to scatter and the timer to its initial state
     reset_release_timers -- reset the mode to dormant and the timer to its initial state
     """
@@ -454,10 +482,11 @@ class EnemyBeetle(Character):
     def move(self):
         """Move the character.
 
-        This method moves the character and ensures
-        that characters are positioned correctly. It should be
-        called every frame.
+        This method carries out things specific to enemy movement,
+        as well as calling back to the general character movement.
+        If the enemy is dead, movement is handled differently.
         """
+
         if self.dead:
             self.retreat()
         else:
@@ -776,11 +805,8 @@ class RedBeetle(EnemyBeetle):
     """Store methods and properties specific to the Red Beetle.
 
     Kivy Properties:
-    color -- ObjectProperty storing the color of the character
     activation_timer -- NumericProperty representing the number of seconds until enemy is released
     """
-
-    activation_timer = NumericProperty(0)
 
     def _set_start_position(self):
         """Set the start position of the enemy.

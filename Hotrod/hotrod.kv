@@ -25,6 +25,9 @@
 
     enemies: [self.red_enemy, self.pink_enemy, self.blue_enemy, self.orange_enemy]
 
+    score:
+
+
     padding: (self.width - self.height) / 2
 
     PlayArea:
@@ -96,13 +99,19 @@
         id: hud
         game: root_game
 
-        height: self.game.height
-        width: self.game.padding
-
         score_label: score
         lives_label: lives
 
+        height: self.game.height
+        width: self.game.padding
+
         FloatLayout:
+            canvas:
+                Color:
+                    rgb: (0.3, 0.1, 0.1)
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
             HUDText:
                 id: name
                 game: root_game

@@ -188,7 +188,7 @@ class PlayArea(Widget):
         determines when they are released. It should be called
         when a new game or level is started.
 
-        Note: timers are started from this widget to ensure that they
+        Note: timers are started from this method to ensure that they
         start after the intro music stops.
         """
 
@@ -252,7 +252,7 @@ class HotrodGame(Widget):
     player_name = StringProperty()
 
     # Game properties
-    pellet_count = NumericProperty()
+    pellet_count = NumericProperty(0)
     pellet_value = NumericProperty(INITIAL_PELLET_VALUE)
     kill_value = NumericProperty(INITIAL_KILL_VALUE)
 
@@ -268,7 +268,6 @@ class HotrodGame(Widget):
     game_over_screen = ObjectProperty(None)
     start_screen = ObjectProperty(None)
     login_screen = ObjectProperty(None)
-    heads_up_display = ObjectProperty(None)
 
     # Dictionary containing all sounds used in the game
     sounds = ObjectProperty()
