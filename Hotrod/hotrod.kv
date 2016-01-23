@@ -9,7 +9,7 @@
 
 
 <HotrodGame>
-    #So that widgets can access in python code
+    #So that children can access in python code
     id: root_game
 
     heads_up_display: hud
@@ -25,12 +25,11 @@
 
     enemies: [self.red_enemy, self.pink_enemy, self.blue_enemy, self.orange_enemy]
 
-    game_properties: [self.powerup_limit, self.powerup_length, self.scatter_length, self.chase_length, self.speed_multiplier]
-
     padding: (self.width - self.height) / 2
 
     PlayArea:
         id: play_area_id
+
         game: root_game
 
         size: self.parent.height, self.parent.height

@@ -50,7 +50,7 @@ class Level(Widget):
     cells = ListProperty()
     cell_size = ObjectProperty()
 
-    beetle_den = {}
+    beetle_den = ObjectProperty()
 
     def generate_level(self):
         """Generate and set up a level.
@@ -281,6 +281,8 @@ class Level(Widget):
         enemy beetles. The den placement is random, and based on the
         position of its center cell.
         """
+        self.beetle_den = {}
+
         center_coords = self.__get_den_center()
 
         center_cell = self.get_cell(center_coords)

@@ -79,7 +79,7 @@ class Character(Widget):
                               self.current_direction.value[1] * self.speed) + self.pos
         self.pos = new_position
 
-        self._check_position()
+        self._check_position_validity()
         self._update_direction(previous_position)
         self._update_grid_position()
 
@@ -91,6 +91,7 @@ class Character(Widget):
         center of its stored cell. This method should be called whenever the
         window size changes.
         """
+
         # So that size and position is correct if window size changes
         current_cell = self.game.level.get_cell(self.grid_position)
         self.center = current_cell.center
@@ -104,13 +105,18 @@ class Character(Widget):
         current and next directions.
         """
 
-        # I made these separate functions to reduce confusion
-        self.__initialise_direction()
         starting_cell = self.game.level.get_cell(self.start_position)
-        # Size must be set first or it does it incorrectly
+
+        # I made these all separate functions to reduce confusion
+        self.__initialise_direction()
+        # Size must be set before position or it does it incorrectly
         self.__initialise_size(starting_cell)
         self.__initialise_position(starting_cell)
         self.__initialise_image()
+        self._initialise_bindings()
+
+    def kill_character(self):
+        self.dead = True
 
     def __initialise_direction(self):
         """Initialise the starting directions of the characters.
@@ -136,7 +142,10 @@ class Character(Widget):
     def __initialise_image(self):
         self.source_image = self.normal_image
 
-    def _check_position(self):
+    def _initialise_bindings(self):
+        self.bind(grid_position=self.game.play_area.check_character_collisions)
+
+    def _check_position_validity(self):
         """Ensure the character cannot move through walls.
 
         This method moves the character back to the center of its current cell
@@ -222,12 +231,6 @@ class Character(Widget):
         grid_position = self.game.level.convert_to_grid_position(self.center)
         self.grid_position = grid_position
 
-    def _kill_enemy(self):
-        pass
-
-    def _kill_player(self):
-        pass
-
     def on_current_direction(self, instance, value):
         """Ensure that the character rotation is correct.
 
@@ -268,31 +271,38 @@ class PlayerBeetle(Character):
 
         This method performs initialisations specific for the player
         character, such as chomp sound and power-up mode. It also
-        performs initialisations relevant to all characters.
+        performs the initialisations relevant to all characters.
         """
-        self.source_image = "images\hotrod.png"
+
         self.__initialise_chomp_sound()
         self.__initialise_states()
-        self.__initialise_bindings()
         Character.initialise(self)
 
     def __initialise_chomp_sound(self):
-        """Initialise the chomp sound."""
+        """Initialise the chomp sound.
+
+        This method initialises the sound played when the player
+        eats a pellet so that it begins with the high note."""
 
         # Always start with high note
         self.last_chomp_high = False
 
     def __initialise_states(self):
-        """Initialise power-up and dead states."""
+        """Initialise power-up and dead states.
+
+        This method initialises the power-up and dead states
+        of the player, so that it starts not dead and not
+        powered up.
+        """
 
         # Start not dead and not powered up
         self.powered_up = False
         self.dead = False
 
-    def __initialise_bindings(self):
+    def _initialise_bindings(self):
         for enemy in self.game.enemies:
             self.bind(powered_up=enemy.switch_frightened_state)
-        #self.bind(grid_position=self.game.play_area.check_character_collisions)
+        Character._initialise_bindings(self)
 
     def __check_pellet_collision(self):
         """Check for pellet collision.
@@ -308,24 +318,6 @@ class PlayerBeetle(Character):
                 # Here so that it still plays if you collect another
                 self.game.sounds['power_up'].play()
             self.__eat_pellet(current_cell)
-
-    def __check_enemy_collision(self):
-        """Check for enemy collisions.
-
-        This method checks if the player is in the same grid position as an
-        enemy. If so, the player is set to dead. If the player has a power-up
-        and the enemy is frightened, the enemy is set to dead instead.
-        """
-
-        # So that it doesn't check when the game is setting up
-        if self.game.game_active:
-            for enemy in self.game.enemies:
-                if enemy.grid_position == self.grid_position:
-                    # Enemy still kills you if it's not scared
-                    if self.powered_up and enemy.frightened:
-                        enemy.dead = True
-                    elif not enemy.dead:
-                        self.dead = True
 
     def __eat_pellet(self, current_cell):
         """Remove the pellet.
@@ -376,7 +368,7 @@ class PlayerBeetle(Character):
             if self.game.sounds['frightened'].state == 'stop':
                 self.game.sounds['frightened'].play()
         else:
-            # So that these are still reset on death
+            # Here so that these are still reset on death whilst powered up
             self.game.sounds['frightened'].stop()
             self.source_image = self.normal_image
 
@@ -384,8 +376,8 @@ class PlayerBeetle(Character):
         """Alternate the chomp sound.
 
         This Kivy event is triggered when the bool storing what
-        the last chomp was is changed. It alternates which sound is
-        used for chomp
+        the last chomp was is changed. It alternates which sound
+        file is used for chomp
         """
 
         if self.last_chomp_high:
@@ -401,7 +393,6 @@ class PlayerBeetle(Character):
         """
 
         self.__check_pellet_collision()
-        self.__check_enemy_collision()
 
     def on_dead(self, instance, value):
         """Check if the player is dead and remove a life if so.
@@ -412,11 +403,8 @@ class PlayerBeetle(Character):
         """
 
         if self.dead:
-            self.powered_up = False
             self.game.lives -= 1
-        else:
-            # Do nothing if set to alive
-            pass
+            self.powered_up = False
 
 
 class EnemyBeetle(Character):
@@ -454,6 +442,33 @@ class EnemyBeetle(Character):
     mode_change_start = NumericProperty()
     mode_time_remaining = NumericProperty()
     mode_change_paused = BooleanProperty(False)
+
+    def move(self):
+        self._set_next_direction()
+        Character.move(self)
+
+    def retreat(self):
+        """Move the enemy to the beetle den.
+
+        This method moves the enemy to the beetle den if it is dead.
+        The enemy is set to not dead upon reaching the beetle den.
+        This method should be called every frame in place of move if
+        the enemy is dead.
+        """
+
+        beetle_den_center = self.game.level.beetle_den['center']
+        beetle_den_center_coords = beetle_den_center.center
+        direction_vector = Vector(beetle_den_center_coords) - Vector(self.center)
+        direction_vector = direction_vector.normalize()
+
+        if not self.collide_point(*beetle_den_center_coords):
+            self.pos = (direction_vector * self.speed) + Vector(self.pos)
+        else:
+            self.center = beetle_den_center_coords
+            # Reset here as rare bug sometimes happens where grid coordinates not set before move
+            self.grid_position = beetle_den_center.coordinates
+            self.dead = False
+            self.frightened = False
 
     def initialise(self):
         """Initialise the enemy characters.
@@ -529,33 +544,6 @@ class EnemyBeetle(Character):
 
         Clock.unschedule(self.__activate)
         Clock.unschedule(self.__change_mode)
-
-    def move(self):
-        self._set_next_direction()
-        Character.move(self)
-
-    def retreat(self):
-        """Move the enemy to the beetle den.
-
-        This method moves the enemy to the beetle den if it is dead.
-        The enemy is set to not dead upon reaching the beetle den.
-        This method should be called every frame in place of move if
-        the enemy is dead.
-        """
-
-        beetle_den_center = self.game.level.beetle_den['center']
-        beetle_den_center_coords = beetle_den_center.center
-        direction_vector = Vector(beetle_den_center_coords) - Vector(self.center)
-        direction_vector = direction_vector.normalize()
-
-        if not self.collide_point(*beetle_den_center_coords):
-            self.pos = (direction_vector * self.speed) + Vector(self.pos)
-        else:
-            self.center = beetle_den_center_coords
-            # Reset here as rare bug sometimes happens where grid coordinates not set before move
-            self.grid_position = beetle_den_center.coordinates
-            self.dead = False
-            self.frightened = False
 
     def _set_next_direction(self):
         """Set the next intended movement direction.
@@ -710,8 +698,6 @@ class EnemyBeetle(Character):
         elif not self.pursuing:
             self.mode_time_remaining = self.scatter_length - time_into_mode
 
-        self.mode_change_paused = True
-
     def resume_mode_change(self):
         """Resume the mode change timers.
 
@@ -722,7 +708,6 @@ class EnemyBeetle(Character):
         print "Resuming at ", str(Clock.get_time())
 
         Clock.schedule_once(self.__change_mode, self.mode_time_remaining)
-        self.mode_change_paused = False
 
     def switch_frightened_state(self, instance, value):
         """Switch the frightened state.
@@ -741,29 +726,12 @@ class EnemyBeetle(Character):
             # Paused here rather than in on_fleeing as all enemies need pausing
             self.pause_mode_change()
         else:
-
             self.frightened = False
             # Resumed here rather than in on_fleeing as should only happen when powerup wears off
             self.resume_mode_change()
 
-    def on_grid_position(self, instance, value):
-        """Check for collision with player on grid position change.
-
-        When the enemy's grid position changes, this Kivy event is called
-        and checks if it has collided with the player. The player state is
-        set to dead if it has.
-        This needs to be checked when the enemy moves as well as when the
-        player moves, in case one is stationary.
-        """
-
-        if self.game.player.grid_position == self.grid_position:
-            if self.game.player.powered_up and self.frightened:
-                self.dead = True
-            elif not self.dead:
-                self.game.player.dead = True
-
     def on_frightened(self, instance, value):
-        """Check if the enemy is fleeing and change its colour accordingly.
+        """Check if the enemy is fleeing and change its image accordingly.
 
         This Kivy event is called when the enemy's fleeing state changes.
         It changes the colour accordingly.
@@ -773,7 +741,6 @@ class EnemyBeetle(Character):
             self.source_image = self.frightened_image
         else:
             self.source_image = self.normal_image
-
 
     def on_dead(self, instance, value):
         """Check if the enemy is dead and play a sound if so.
@@ -785,6 +752,7 @@ class EnemyBeetle(Character):
         if self.dead:
             self.game.score += self.game.kill_value
             self.game.sounds['retreat'].play()
+
 
 class RedBeetle(EnemyBeetle):
 
@@ -813,6 +781,7 @@ class RedBeetle(EnemyBeetle):
         The red beetle's target position is the player's position when pursuing.
         The target position is the upper right corner when scattering.
         """
+
         if self.pursuing:
             # Target position is always player's position
             return self.game.player.grid_position
@@ -853,13 +822,15 @@ class PinkBeetle(EnemyBeetle):
         if self.pursuing:
             player_position = self.game.player.grid_position
             player_direction_vector = self.game.player.current_direction.value
-            # Target position is the 2 cells ahead of the player
-            target_position = Vector(player_position) + 2 * player_direction_vector
+            # Target position is 2 cells ahead of the player
+            target_position = Vector(player_position) + (2 * player_direction_vector)
             return target_position
+
         else:
-            # Upper left corner
+            # Upper left corner in scatter mode
             target_position = (-1, self.game.level.rows + 1)
             return target_position
+
 
 class BlueBeetle(EnemyBeetle):
 
@@ -892,13 +863,14 @@ class BlueBeetle(EnemyBeetle):
         if self.pursuing:
             player_position = self.game.player.grid_position
             player_direction_vector = self.game.player.current_direction.value
-            space_ahead_of_player = Vector(player_position) + 2 * player_direction_vector
+            two_cells_ahead_of_player = Vector(player_position) + (2 * player_direction_vector)
             red_beetle_position = self.game.red_enemy.grid_position
             # Target position is double the vector between 2 spaces ahead of the player and the red beetle
-            target_position = 2 * Vector(space_ahead_of_player) - Vector(red_beetle_position)
+            target_position = 2 * Vector(two_cells_ahead_of_player) - Vector(red_beetle_position)
             return target_position
+
         else:
-            # Bottom right
+            # Bottom right in scatter mode
             target_position = (self.game.level.columns + 1, -1)
             return target_position
 
@@ -936,7 +908,6 @@ class OrangeBeetle(EnemyBeetle):
         if self.pursuing:
             player_position = self.game.player.grid_position
             distance_from_player = Vector(player_position).distance(self.grid_position)
-
             if distance_from_player > self.flee_distance:
                 # Target position is player if the player is more than 4 tiles away
                 target_position = player_position
@@ -944,9 +915,10 @@ class OrangeBeetle(EnemyBeetle):
                 # Target position is bottom left corner if player is within 4 tiles
                 target_position = -1, -1
             return target_position
+
         else:
-            # Bottom left
-            target_position = (-1, -1)
+            # Bottom left in scatter mode
+            target_position = -1, -1
             return target_position
 
 

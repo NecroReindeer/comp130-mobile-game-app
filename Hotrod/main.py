@@ -67,17 +67,21 @@ MIN_POWERUP_LENGTH = 0
 MIN_POWERUP_LIMIT = 0
 
 
-# This is a separate widget because I intend to make HotrodGame into a layout
 class PlayArea(Widget):
-    """Widget for the gameplay area. Gameplay objects are children of this widget."""
+
+    """Store methods related to the mechanics and visualisation of the game.
+
+    This widget represents the gameplay area. The gameplay objects are children of this widget.
+    This class handles anything relating to the graphical representation of the game and the
+    mechanics of the game. This includes level generation, movement updates, and character initialisation.
+    """
 
     def start_game(self):
         """Start the game.
 
         This method begins the game.
-        This method should be called when a game starts.
-        That is, on first start, after a game over, or on
-        a new level.
+        This method should be called when a game first starts,
+        after a game over, or on a new level.
         """
 
         self.set_up_level()
@@ -141,7 +145,7 @@ class PlayArea(Widget):
 
         This method begins the actual gameplay by setting the
         game_active property to True, as well as beginning
-        the enemies' timers.. It should be called when a new game
+        the enemies' timers. It should be called when a new game
         or level starts.
         """
 
@@ -208,6 +212,20 @@ class PlayArea(Widget):
             enemy.start_scatter_timer()
         self.game.game_active = True
 
+    def check_character_collisions(self, instance, value):
+        """Check for character collisions.
+
+        This method checks if the player is in the same grid position as an
+        enemy. If so, the player is set to dead. If the player has a power-up
+        and the enemy is frightened, the enemy is set to dead instead.
+        """
+
+        for enemy in self.game.enemies:
+            if enemy.grid_position == self.game.player.grid_position:
+                if self.game.player.powered_up and enemy.frightened:
+                    enemy.kill_character()
+                elif not enemy.dead:
+                    self.game.player.kill_character()
 
 class HotrodGame(Widget):
     """Manage the game and application.
@@ -216,6 +234,10 @@ class HotrodGame(Widget):
     This widget has access to all major gameplay widgets, in addition
     to general game properties such as score and lives.
     Gameplay widgets access each other through this widget.
+    This widget contains methods that facilitate the menu screens and
+    application flow, as well as reading input from the user.
+    It stores general information relating to the game that is of
+    use to the user, such as score and lives.
     """
 
     # References to game elements
@@ -452,7 +474,7 @@ class HotrodGame(Widget):
         """Reset the game after a game over.
 
         This method initialises the game's properties
-         before restarting the game.
+        before restarting the game.
         """
 
         self.initialise_properties()
@@ -476,6 +498,7 @@ class HotrodGame(Widget):
         self.chase_length = INITIAL_CHASE_TIME
         self.speed_multiplier = INITIAL_SPEED_MULTIPLIER
 
+        # Ensure pellet counter starts at 0
         self.pellet_count = 0
 
     def advance_level(self):
@@ -487,7 +510,7 @@ class HotrodGame(Widget):
         """
 
         self.game_active = False
-        # Increase level and lives by 1
+        # Increase level number and lives by 1
         self.level_number += 1
         self.lives += 1
         self.start()
@@ -514,14 +537,16 @@ class HotrodGame(Widget):
         self.kill_value += KILL_VALUE_INCREMENT
 
     def on_level_number(self, instance, value):
-        # Difficulty increased after level 1
+        # Difficulty increases after level 1
         if self.level_number != 1:
             self.increase_difficulty()
 
     def on_pellet_count(self, instance, value):
+        # If there are no pellets left
         if self.pellet_count == 0:
             if self.game_active:
                 self.advance_level()
+
 
 class HotrodApp(App):
     # game is property so that it can be referred to
