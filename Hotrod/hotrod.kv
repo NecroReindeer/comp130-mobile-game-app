@@ -40,6 +40,7 @@
             id: player_beetle_id
             game: root_game
 
+            # Player starts in bottom left corner
             start_x: 0
             start_y: 0
             start_position: self.start_x, self.start_y
@@ -48,25 +49,34 @@
         RedBeetle:
             id: red_beetle
             game: root_game
+
+            # Red beetle becomes active immediately
             activation_timer: 0
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
         PinkBeetle:
             id: pink_beetle
             game: root_game
+
+            # Pink beetle becomes active after 10 seconds
             activation_timer: 10
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
         BlueBeetle:
             id: blue_beetle
             game: root_game
+
+            # Blue beetle becomes active after 20 seconds
             activation_timer: 20
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
         OrangeBeetle:
             id: orange_beetle
             game: root_game
+
+            # Flees if closer than 4 spaces from player
             flee_distance: 4
+            # Orange beetle becomes active after 30 seconds
             activation_timer: 30
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
@@ -157,80 +167,83 @@
 
 
 <PlayerBeetle>
+    normal_image: "images/hotrod.png"
+    power_image: "images/power.png"
+
     canvas:
-        Color:
-            rgba: self.color
         PushMatrix
         Rotate:
             origin: self.center
             # Because the image has the character facing up
             angle: self.orientation + 90
         Rectangle:
-            source: "images/hotrod.png"
+            source: self.source_image
             pos: self.pos
             size: self.size
         PopMatrix
 
+<EnemyBeetle>
+    frightened_image: "images/frightened.png"
 
 <RedBeetle>
+    normal_image: "images/red.png"
+
     canvas:
-        Color:
-            rgba: self.color
         PushMatrix
         Rotate:
             origin: self.center
             # Because the image has the character facing up
             angle: self.orientation + 90
         Rectangle:
-            source: "images/red.png"
+            source: self.source_image
             pos: self.pos
             size: self.size
         PopMatrix
 
 
 <PinkBeetle>
+    normal_image: "images/pink.png"
+
     canvas:
-        Color:
-            rgba: self.color
         PushMatrix
         Rotate:
             origin: self.center
             # Because the image has the character facing up
             angle: self.orientation + 90
         Rectangle:
-            source: "images/pink.png"
+            source: self.source_image
             pos: self.pos
             size: self.size
         PopMatrix
 
 
 <BlueBeetle>
+    normal_image: "images/blue.png"
+
     canvas:
-        Color:
-            rgba: self.color
         PushMatrix
         Rotate:
             origin: self.center
             # Because the image has the character facing up
             angle: self.orientation + 90
         Rectangle:
-            source: "images/blue.png"
+            source: self.source_image
             pos: self.pos
             size: self.size
         PopMatrix
 
 
 <OrangeBeetle>
+    normal_image: "images/orange.png"
+
     canvas:
-        Color:
-            rgba: self.color
         PushMatrix
         Rotate:
             origin: self.center
             # Because the image has the character facing up
             angle: self.orientation + 90
         Rectangle:
-            source: "images/orange.png"
+            source: self.source_image
             pos: self.pos
             size: self.size
         PopMatrix

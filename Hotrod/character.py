@@ -19,6 +19,7 @@ from kivy.properties import ObjectProperty
 from kivy.properties import NumericProperty
 from kivy.properties import ReferenceListProperty
 from kivy.properties import BooleanProperty
+from kivy.properties import StringProperty
 from kivy.vector import Vector
 from kivy.clock import Clock
 
@@ -26,12 +27,6 @@ import collectable
 import direction
 import level_cell
 
-# This makes the source image be its original colours
-DEFAULT_COLOR = (1, 1, 1, 1)
-# Temporary power-up colour
-POWER_COLOR = (1, 1, 0, 1)
-# Temporary frightened colour
-FRIGHTENED_COLOR = (0.5, 0.5, 1, 1)
 
 class Character(Widget):
 
@@ -62,14 +57,13 @@ class Character(Widget):
     grid_position = ReferenceListProperty(x_position, y_position)
 
     speed = NumericProperty(0)
-    speed_multiplier = NumericProperty(1)
-    color = ObjectProperty(DEFAULT_COLOR)
 
     current_direction = ObjectProperty(direction.Direction.right)
     next_direction = ObjectProperty(direction.Direction.right)
 
     # Determines the angle the character is displayed
     orientation = NumericProperty()
+    source_image = StringProperty()
 
     def move(self):
         """Move the character.
@@ -82,11 +76,11 @@ class Character(Widget):
         # Copy of previous window position
         previous_position = self.center[:]
         new_position = Vector(self.current_direction.value[0] * self.speed,
-                          self.current_direction.value[1] * self.speed) + self.pos
+                              self.current_direction.value[1] * self.speed) + self.pos
         self.pos = new_position
 
         self._check_position()
-        self._update_direction((previous_position))
+        self._update_direction(previous_position)
         self._update_grid_position()
 
     def update_character(self):
@@ -110,11 +104,13 @@ class Character(Widget):
         current and next directions.
         """
 
+        # I made these separate functions to reduce confusion
         self.__initialise_direction()
         starting_cell = self.game.level.get_cell(self.start_position)
         # Size must be set first or it does it incorrectly
         self.__initialise_size(starting_cell)
         self.__initialise_position(starting_cell)
+        self.__initialise_image()
 
     def __initialise_direction(self):
         """Initialise the starting directions of the characters.
@@ -136,6 +132,9 @@ class Character(Widget):
     def __initialise_size(self, starting_cell):
         # Set size to interior of cell size
         self.size = starting_cell.interior
+
+    def __initialise_image(self):
+        self.source_image = self.normal_image
 
     def _check_position(self):
         """Ensure the character cannot move through walls.
@@ -271,7 +270,7 @@ class PlayerBeetle(Character):
         character, such as chomp sound and power-up mode. It also
         performs initialisations relevant to all characters.
         """
-
+        self.source_image = "images\hotrod.png"
         self.__initialise_chomp_sound()
         self.__initialise_states()
         self.__initialise_bindings()
@@ -323,7 +322,7 @@ class PlayerBeetle(Character):
             for enemy in self.game.enemies:
                 if enemy.grid_position == self.grid_position:
                     # Enemy still kills you if it's not scared
-                    if self.powered_up and enemy.fleeing:
+                    if self.powered_up and enemy.frightened:
                         enemy.dead = True
                     elif not enemy.dead:
                         self.dead = True
@@ -360,6 +359,7 @@ class PlayerBeetle(Character):
         player's powered up state to false when called.
         """
 
+        # This is in a method so that it can be scheduled
         self.powered_up = False
 
     def on_powered_up(self, instance, value):
@@ -372,14 +372,13 @@ class PlayerBeetle(Character):
 
         if self.powered_up:
             # Only these are to be done on initial collection
-            self.color = POWER_COLOR
+            self.source_image = self.power_image
             if self.game.sounds['frightened'].state == 'stop':
-                self.game.sounds['frightened'].loop = True
                 self.game.sounds['frightened'].play()
         else:
             # So that these are still reset on death
             self.game.sounds['frightened'].stop()
-            self.color = DEFAULT_COLOR
+            self.source_image = self.normal_image
 
     def on_last_chomp_high(self, instance, value):
         """Alternate the chomp sound.
@@ -445,7 +444,7 @@ class EnemyBeetle(Character):
 
     pursuing = BooleanProperty(False)
     dormant = BooleanProperty(True)
-    fleeing = BooleanProperty(False)
+    frightened = BooleanProperty(False)
     dead = BooleanProperty(False)
 
     scatter_length = NumericProperty()
@@ -514,7 +513,7 @@ class EnemyBeetle(Character):
     def __initialise_flee_mode(self):
         """Set flee mode to initial value."""
 
-        self.fleeing = False
+        self.frightened = False
 
     def __initialise_bindings(self):
        pass
@@ -556,7 +555,7 @@ class EnemyBeetle(Character):
             # Reset here as rare bug sometimes happens where grid coordinates not set before move
             self.grid_position = beetle_den_center.coordinates
             self.dead = False
-            self.fleeing = False
+            self.frightened = False
 
     def _set_next_direction(self):
         """Set the next intended movement direction.
@@ -572,7 +571,7 @@ class EnemyBeetle(Character):
             if current_cell.get_edge(self.current_direction).type == level_cell.CellEdgeType.wall:
                 self.next_direction = self.current_direction.get_opposite()
 
-        elif self.fleeing:
+        elif self.frightened:
             possible_moves = self.__get_possible_moves()
             self.next_direction = self.__get_random_move(possible_moves)
 
@@ -738,12 +737,12 @@ class EnemyBeetle(Character):
 
         if self.game.player.powered_up:
             if self.game.level.get_cell(self.grid_position) not in self.game.level.beetle_den.itervalues():
-                self.fleeing = True
+                self.frightened = True
             # Paused here rather than in on_fleeing as all enemies need pausing
             self.pause_mode_change()
         else:
 
-            self.fleeing = False
+            self.frightened = False
             # Resumed here rather than in on_fleeing as should only happen when powerup wears off
             self.resume_mode_change()
 
@@ -758,22 +757,22 @@ class EnemyBeetle(Character):
         """
 
         if self.game.player.grid_position == self.grid_position:
-            if self.game.player.powered_up and self.fleeing:
+            if self.game.player.powered_up and self.frightened:
                 self.dead = True
             elif not self.dead:
                 self.game.player.dead = True
 
-    def on_fleeing(self, instance, value):
+    def on_frightened(self, instance, value):
         """Check if the enemy is fleeing and change its colour accordingly.
 
         This Kivy event is called when the enemy's fleeing state changes.
         It changes the colour accordingly.
         """
 
-        if self.fleeing:
-            self.color = (FRIGHTENED_COLOR)
+        if self.frightened:
+            self.source_image = self.frightened_image
         else:
-            self.color = (DEFAULT_COLOR)
+            self.source_image = self.normal_image
 
 
     def on_dead(self, instance, value):

@@ -142,7 +142,7 @@ class Cell(Widget):
         """
 
         if self in self.parent.beetle_den.itervalues() or self.coordinates == self.parent.game.player.start_position:
-            self.remove_pellet()
+            self.pellet_exists = False
         else:
             self.pellet.type = collectable.PelletType.normal
             self.pellet_exists = True

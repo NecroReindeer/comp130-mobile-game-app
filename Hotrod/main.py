@@ -281,6 +281,7 @@ class HotrodGame(Widget):
             key = filename
             self.sounds[key] = SoundSDL2(source=(os.path.join(SOUND_DIRECTORY, file)))
         self.sounds['title'].loop = True
+        self.sounds['frightened'].loop = True
 
     def on_touch_up(self, touch):
         """Detect player swipes and change character's next direction accordingly.
