@@ -488,7 +488,7 @@ class EnemyBeetle(Character):
         if self.dead:
             self.retreat()
         else:
-            self._set_next_direction()
+            self.__set_next_direction()
             Character.move(self)
 
     def retreat(self):
@@ -554,7 +554,7 @@ class EnemyBeetle(Character):
         self.mode_change_timer = self.scatter_length
         Clock.schedule_once(self.__change_mode, self.mode_change_timer)
 
-    def start_release_timer(self):
+    def start_activation_timer(self):
         """Reset the activation timer to its initial state.
 
         This method resets the enemy's release timer.
@@ -562,6 +562,7 @@ class EnemyBeetle(Character):
         """
 
         Clock.unschedule(self.__activate)
+        self.activation_timer_start = Clock.get_time()
         Clock.schedule_once(self.__activate, self.activation_timer)
 
     def __initialise_chase_mode(self):
@@ -589,7 +590,7 @@ class EnemyBeetle(Character):
         Clock.unschedule(self.__activate)
         Clock.unschedule(self.__change_mode)
 
-    def _set_next_direction(self):
+    def __set_next_direction(self):
         """Set the next intended movement direction.
 
         This method sets the enemies next intended movement direction.
@@ -646,6 +647,7 @@ class EnemyBeetle(Character):
     # Needed to be a method to schedule on Clock
     def __activate(self, dt):
         """Change enemy state to dormant"""
+
         self.dormant = False
 
     def __get_possible_moves(self):
@@ -734,7 +736,6 @@ class EnemyBeetle(Character):
         Clock.unschedule(self.__change_mode)
         pause_time = Clock.get_time()
 
-        print "Pausing at ", str(pause_time)
         time_into_mode = pause_time - self.mode_change_start
 
         if self.pursuing:
@@ -748,8 +749,6 @@ class EnemyBeetle(Character):
         This method resumes the mode change timers. It should
         be called when the enemies stop being frightened.
         """
-
-        print "Resuming at ", str(Clock.get_time())
 
         Clock.schedule_once(self.__change_mode, self.mode_time_remaining)
 

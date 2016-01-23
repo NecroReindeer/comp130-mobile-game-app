@@ -1,3 +1,13 @@
+"""Contain classes for managing the game application.
+
+This file contains classes that are used for managing the
+game application. Running this file will run the app.
+
+Classes:
+HotrodApp(App) -- Kivy App widget
+HotrodGame(Widget) -- root game widget
+PlayArea(Widget) -- widget for the gameplay area
+"""
 
 # Standard Python libraries
 import json
@@ -45,7 +55,7 @@ INITIAL_KILL_VALUE = 100
 # Pellets start out worth 10 points
 INITIAL_PELLET_VALUE = 10
 # 6 powerups are spawned at the start
-INITIAL_POWERUP_COUNT = 6
+INITIAL_POWERUP_LIMIT = 6
 # The powerup lasts 10 seconds at the start
 INITIAL_POWERUP_TIME = 10
 # Scatter and chase times are 7 and 15 respectively at the start
@@ -62,7 +72,7 @@ PELLET_VALUE_INCREMENT = 10
 KILL_VALUE_INCREMENT = 100
 SCATTER_DECREMENT = -1
 POWERUP_TIME_DECREMENT = -1
-POWERUP_COUNT_DECREMENT = -1
+POWERUP_LIMIT_DECREMENT = -1
 
 # These are the maximum/minimum values the properties can take
 MAX_SPEED_MULTIPLIER = 2
@@ -99,7 +109,7 @@ class PlayArea(Widget):
         """Set up the level and characters.
 
         This method initialises the generates the level and
-        initialises the characters. It should be called when
+        resets the characters. It should be called when
         a new game or level starts.
         """
 
@@ -125,7 +135,7 @@ class PlayArea(Widget):
         This method ensures the characters' size, positions and
         certain modes are initialised, as well as resetting the
         activation timers, mode length and start position for the enemies.
-        It should be called when a new game or level is started.
+        It should be called only when a new game or level is started.
         """
 
         self.game.player.initialise()
@@ -152,6 +162,8 @@ class PlayArea(Widget):
         game_active property to True, as well as beginning
         the enemies' timers. It should be called when a new game
         or level starts.
+        This method is triggered by a Kivy event so that the game
+        begins after the jingle stops playing.
         """
 
         self.start_enemy_timers()
@@ -183,7 +195,7 @@ class PlayArea(Widget):
 
         for enemy in self.game.enemies:
             enemy.start_scatter_timer()
-            enemy.start_release_timer()
+            enemy.start_activation_timer()
 
     def reset_after_death(self, event):
         """Reset the characters' positions and reset the scatter timer.
@@ -220,6 +232,7 @@ class PlayArea(Widget):
         This method checks if the player is in the same grid position as an
         enemy. If so, the player is set to dead. If the player has a power-up
         and the enemy is frightened, the enemy is set to dead instead.
+        It is a Kivy property binding tied to the characters' grid positions.
         """
 
         for enemy in self.game.enemies:
@@ -237,30 +250,30 @@ class HotrodGame(Widget):
     This widget manages and controls the application.
     This widget has access to all major gameplay widgets, in addition
     to general game properties such as score and lives.
-    Gameplay widgets access each other through this widget.
     This widget contains methods that facilitate the menu screens and
     application flow, as well as reading input from the user.
     It stores general information relating to the game that is of
     use to the user, such as score and lives.
+    Gameplay widgets access each other through this widget.
     """
 
-    # Properties game keeps track of
+    # General properties game keeps track of
     score = NumericProperty(INITIAL_SCORE)
     lives = NumericProperty(INITIAL_LIVES)
     level_number = NumericProperty(INITIAL_LEVEL)
     player_name = StringProperty()
-
-    # Game properties
+    # Pellet_count should always begin at 0
     pellet_count = NumericProperty(0)
-    pellet_value = NumericProperty(INITIAL_PELLET_VALUE)
-    kill_value = NumericProperty(INITIAL_KILL_VALUE)
 
-    # Difficulty modifiers
-    powerup_limit = NumericProperty(INITIAL_POWERUP_COUNT)
+
+    # Game properties and difficulty modifiers
+    powerup_limit = NumericProperty(INITIAL_POWERUP_LIMIT)
     powerup_length = NumericProperty(INITIAL_POWERUP_TIME)
     scatter_length = NumericProperty(INITIAL_SCATTER_TIME)
     chase_length = NumericProperty(INITIAL_CHASE_TIME)
     speed_multiplier = NumericProperty(INITIAL_SPEED_MULTIPLIER)
+    pellet_value = NumericProperty(INITIAL_PELLET_VALUE)
+    kill_value = NumericProperty(INITIAL_KILL_VALUE)
 
     # GUI elements
     screens = ListProperty()
@@ -353,7 +366,7 @@ class HotrodGame(Widget):
         """Advance to the next level.
 
         This method stops the game and increases the
-        level count and difficulty, before starting a
+        level number and difficulty, before starting a
         new game based on these adjusted parameters.
         """
 
@@ -377,8 +390,8 @@ class HotrodGame(Widget):
             self.scatter_length += SCATTER_DECREMENT
         if self.powerup_length >= MIN_POWERUP_LENGTH - POWERUP_TIME_DECREMENT:
             self.powerup_length += POWERUP_TIME_DECREMENT
-        if self.powerup_limit >= MIN_POWERUP_LIMIT - POWERUP_COUNT_DECREMENT:
-            self.powerup_limit += POWERUP_COUNT_DECREMENT
+        if self.powerup_limit >= MIN_POWERUP_LIMIT - POWERUP_LIMIT_DECREMENT:
+            self.powerup_limit += POWERUP_LIMIT_DECREMENT
 
         self.chase_length += CHASE_INCREMENT
         self.pellet_value += PELLET_VALUE_INCREMENT
@@ -481,7 +494,7 @@ class HotrodGame(Widget):
         name = json.loads(results)
         if name is None:
             self.login_screen.instruction_text.text = "Invalid name!"
-            self.login_screen.existing_button.disabled = False
+            self.login_screen.new_button.disabled = False
             self.login_screen.existing_button.disabled = False
         else:
             self.player_name = name
@@ -576,8 +589,7 @@ class HotrodGame(Widget):
 
 
 class HotrodApp(App):
-    # game is property so that it can be referred to
-    # outside of build()
+    # game is property so that it can be referred to outside of build()
     game = ObjectProperty(None)
 
     def build(self):
