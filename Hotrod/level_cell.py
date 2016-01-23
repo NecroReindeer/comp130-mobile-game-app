@@ -10,16 +10,21 @@ Wall(Widget) -- widget representing cell walls
 CellEdgeType(Enum) -- enum for classifying an edge as a wall or a passage
 """
 
+# Standard Python library
 import random
 
+# Kivy modules
 from kivy.uix.widget import Widget
 from kivy.properties import ObjectProperty, NumericProperty, ReferenceListProperty, ListProperty, BooleanProperty
 from kivy.vector import Vector
 
+# Other modules
 from enum import Enum
 
+# Own modules
 import collectable
 import direction
+
 
 class Cell(Widget):
 
@@ -27,6 +32,7 @@ class Cell(Widget):
 
     This class stores Kivy properties relating to individual cells and
     keeps track of the cell's edges.
+    It must be instantiated as a child of the level.Level class.
 
     Children:
     Four CellEdge widgets
@@ -46,20 +52,7 @@ class Cell(Widget):
     coordinates_y = NumericProperty(0)
     coordinates = ReferenceListProperty(coordinates_x, coordinates_y)
 
-    sides = NumericProperty(4)
-    wall_thickness = NumericProperty(0.1)
-    # Size of the area in the cell the player can occupy
-    interior = ListProperty()
-
-    left_edge = ObjectProperty(None)
-    right_edge = ObjectProperty(None)
-    top_edge = ObjectProperty(None)
-    bottom_edge = ObjectProperty(None)
-
-    edges = ListProperty()
-
     pellet_exists = BooleanProperty()
-    pellet = ObjectProperty()
 
     def get_edge(self, direction):
         """Return the CellEdge widget corresponding to the given direction.
@@ -76,11 +69,11 @@ class Cell(Widget):
             if edge.direction == direction:
                 return edge
 
-    def is_initialised(self):
+    def all_edges_initialised(self):
         """Check if all cell edges have been initialised.
 
-        This method returns true if all cell edges have been assigned
-        a type.
+        This method returns true if all cell edges have
+        been assigned a type.
         """
 
         for edge in self.edges:
@@ -121,7 +114,7 @@ class Cell(Widget):
         """
 
         self.size = self.parent.cell_size
-        self.pos = self.parent.convert_to_window_position((self.coordinates_x, self.coordinates_y))
+        self.pos = self.parent.convert_to_window_position(self.coordinates)
 
         for edge in self.edges:
             edge.height = self.height + (2 * self.height * self.wall_thickness)
@@ -141,12 +134,13 @@ class Cell(Widget):
         is assigned to normal and the game's pellet count is increased.
         """
 
+        self.parent.game.pellet_count += 1
+
         if self in self.parent.beetle_den.itervalues() or self.coordinates == self.parent.game.player.start_position:
-            self.pellet_exists = False
+            self.remove_pellet()
         else:
             self.pellet.type = collectable.PelletType.normal
             self.pellet_exists = True
-            self.parent.game.pellet_count += 1
 
     def remove_pellet(self):
         """Remove the pellet from the cell.
@@ -167,7 +161,7 @@ class Cell(Widget):
         It also binds the pellet's existence to the enemies' frightened state, so
         that remaining enemies still become frightened if the player collects an
         additional power up whilst powered up.
-        The pellet existence is also bound to the players' pow erup activation method.
+        The pellet existence is also bound to the players' powerup activation method.
         """
 
         self.pellet.type = collectable.PelletType.power
@@ -191,7 +185,6 @@ class CellEdge(Widget):
     """
 
     type = ObjectProperty(None)
-    direction = ObjectProperty(None)
 
     def update_edge_widget(self):
         """Ensure that the edge has the correct child widget.
@@ -207,8 +200,8 @@ class CellEdge(Widget):
             wall = Wall()
             wall.size = self.size
             wall.pos = self.pos
-            wall.origin = self.parent.center
-            wall.angle = self.direction.get_angle()
+            wall.rotation_origin = self.parent.center
+            wall.rotation = self.direction.get_angle()
             self.add_widget(wall)
 
     def on_type(self, instance, value):
@@ -222,11 +215,16 @@ class CellEdge(Widget):
 
 
 class Wall(Widget):
-    angle = NumericProperty(0)
-    origin = ObjectProperty((0,0))
+    """Store information relating to wall widgets.
+
+    This class is defined in the kv file.
+    """
+
+    pass
 
 
 class CellEdgeType(Enum):
+    # Arbitrary numbers for enum
     passage = 0
     wall = 1
 

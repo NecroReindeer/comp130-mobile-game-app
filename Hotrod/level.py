@@ -1,25 +1,33 @@
-"""This module keeps track of things relating to the level, such as cells and pellets.
+"""Contain a class for managing level generation.
+
+This module contains a class that manages level generation and
+allows access to the level's cells.
 
 Classes:
 Level(Widget) -- class for generating level and storing information about the level
 """
 
+# Standard python library
 import random
 
+# Kivy modules
 from kivy.uix.widget import Widget
 from kivy.vector import Vector
 from kivy.properties import ObjectProperty, NumericProperty, ListProperty
 
+# Own modules
 import direction
 import collectable
 import level_cell
 import error
+
 
 # Minimum number of cells from the edge the beetle den must be
 # Should always be greater than 1 and less than columns/2 - beetle den size
 BEETLE_DEN_PADDING_X = 1
 # Should always be greater than 1 and less than rows/2
 BEETLE_DEN_PADDING_Y = 1
+
 
 class Level(Widget):
 
@@ -40,16 +48,10 @@ class Level(Widget):
     level_cell.Cell instances (after level generation)
     """
 
-    # Space from the edge of the window that the level is displayed
-    padding = NumericProperty()
-
-    columns = NumericProperty(8)
-    rows = NumericProperty(8)
-
     # List to contain generated cells to add as widgets
     cells = ListProperty()
-    cell_size = ObjectProperty()
 
+    # Dictionary to contain cells in the beetle den
     beetle_den = ObjectProperty()
 
     def generate_level(self):
@@ -108,7 +110,7 @@ class Level(Widget):
         (x, y) -- window position coordinates as a tuple
         """
 
-        grid_x = int((x - self.padding) / self.cell_size[0])
+        grid_x = int((x - self.x) / self.cell_size[0])
         grid_y = int(y / self.cell_size[1])
         return grid_x, grid_y
 
@@ -122,7 +124,7 @@ class Level(Widget):
         (x, y) -- grid position coordinates tuple
         """
 
-        window_x = self.cell_size[0] * x + self.padding
+        window_x = self.cell_size[0] * x + self.x
         window_y = self.cell_size[1] * y
         return window_x, window_y
 
@@ -163,7 +165,7 @@ class Level(Widget):
         current_index = len(active_cells) - 1         # Last index
         current_cell = active_cells[current_index]
 
-        if current_cell.is_initialised():
+        if current_cell.all_edges_initialised():
             # Remove fully initialised cells from the list so that they are not revisited
             del active_cells[current_index]
             return
@@ -293,7 +295,7 @@ class Level(Widget):
         self.beetle_den['left'] = left_cell
         self.beetle_den['right'] = right_cell
 
-        self.__set_den_edges()
+        self.__initialise_den_edges()
         self.__remove_walls_around_den()
 
     def __get_den_center(self):
@@ -303,12 +305,13 @@ class Level(Widget):
                              random.randrange(BEETLE_DEN_PADDING_Y, self.rows - BEETLE_DEN_PADDING_Y))
         return den_center_coords
 
-    def __set_den_edges(self):
+    def __initialise_den_edges(self):
         """Set the edges of the beetle den correctly.
 
         This method ensures that the edges of the beetle den are set up correctly.
         The beetle den is enclosed with a one-way exit at the top of the center cell.
         """
+
         den_center = self.beetle_den['center']
 
         self.__set_cell_edges(den_center, (direction.Direction.down, direction.Direction.up))
@@ -319,12 +322,13 @@ class Level(Widget):
         den_center.get_edge(direction.Direction.up).type = level_cell.CellEdgeType.passage
 
     def __remove_walls_around_den(self):
-        """Ensure that there is a clean passage around the den.
+        """Ensure that there is a clear passage around the den.
 
         This method ensures that there is a clear passage around the circumference
         of the enemy den. This is both to guarantee there are no dead ends around it,
         and reduce difficulty by allowing the player to move freely when near the enemy den.
         """
+
         for cell in self.beetle_den.itervalues():
             for dir in direction.Direction:
                 adjacent_cell = self.get_adjacent_cell(cell, dir)

@@ -1,8 +1,11 @@
+
+# Standard Python libraries
 import json
 import random
 import os
 import sys
 
+# Kivy modules
 from kivy.app import App
 from kivy.uix.widget import Widget
 from kivy.properties import ObjectProperty
@@ -17,6 +20,7 @@ from kivy.core.audio import SoundLoader
 from kivy.core.audio.audio_sdl2 import SoundSDL2
 from kivy.network.urlrequest import UrlRequest
 
+# Own modules
 import direction
 import level
 import level_cell
@@ -164,21 +168,6 @@ class PlayArea(Widget):
         for enemy in self.game.enemies:
             enemy.move()
 
-    def update_play_area(self, instance, value):
-        """Ensure that game element sizes are correct.
-
-        This Kivy event is triggered when window/level size changes to ensure
-        that all elements of the play area are positioned and sized correctly
-        """
-
-        for column in self.game.level.cells:
-            for cell in column:
-                cell.update_cell()
-
-        for enemy in self.game.enemies:
-            enemy.update_character()
-        self.game.player.update_character()
-
     def start_enemy_timers(self):
         """Start the timers for the enemies' mode changes and release.
 
@@ -210,6 +199,21 @@ class PlayArea(Widget):
             enemy.start_scatter_timer()
         self.game.game_active = True
 
+    def update_play_area(self, instance, value):
+        """Ensure that game element sizes are correct.
+
+        This Kivy event is triggered when window/level size changes to ensure
+        that all elements of the play area are positioned and sized correctly
+        """
+
+        for column in self.game.level.cells:
+            for cell in column:
+                cell.update_cell()
+
+        for enemy in self.game.enemies:
+            enemy.update_character()
+        self.game.player.update_character()
+
     def check_character_collisions(self, instance, value):
         """Check for character collisions.
 
@@ -227,6 +231,7 @@ class PlayArea(Widget):
 
 
 class HotrodGame(Widget):
+
     """Manage the game and application.
 
     This widget manages and controls the application.
@@ -238,12 +243,6 @@ class HotrodGame(Widget):
     It stores general information relating to the game that is of
     use to the user, such as score and lives.
     """
-
-    # References to game elements
-    play_area = ObjectProperty(None)
-    level = ObjectProperty(None)
-    player = ObjectProperty(None)
-    enemies = ListProperty()
 
     # Properties game keeps track of
     score = NumericProperty(INITIAL_SCORE)
@@ -301,8 +300,8 @@ class HotrodGame(Widget):
         # Dictionary keys correspond to filenames
         for file in os.listdir(SOUND_DIRECTORY):
             filename, extension = os.path.splitext(file)
-            key = filename
-            self.sounds[key] = SoundSDL2(source=(os.path.join(SOUND_DIRECTORY, file)))
+            dictionary_key = filename
+            self.sounds[dictionary_key] = SoundSDL2(source=(os.path.join(SOUND_DIRECTORY, file)))
 
         self.sounds['title'].loop = True
         self.sounds['frightened'].loop = True
@@ -323,7 +322,7 @@ class HotrodGame(Widget):
         """Reset the game after a game over.
 
         This method initialises the game's properties
-        before restarting the game.
+        and then restarts the game.
         """
 
         self.__initialise_properties()
@@ -333,7 +332,7 @@ class HotrodGame(Widget):
         """Initialise the game's properties.
 
         This method sets all of the game's properties to their
-        initial values, as defined by the relative constants.
+        initial values, as defined by the corresponding constants.
         """
 
         self.level_number = INITIAL_LEVEL
@@ -442,7 +441,7 @@ class HotrodGame(Widget):
         self.sounds['title'].play()
         self.game_over_screen = user_interface.GameOverScreen()
         self.__show_screen(self.game_over_screen)
-        self.game_over_screen.L(self.score)
+        self.game_over_screen.show_final_score(self.score)
         self.game_over_screen.show_best_score(self.player_name, self.level_number, self.score)
         self.game_over_screen.show_high_scores(self.level_number)
         self.game_over_screen.reset_button.bind(on_press=self.__reset)

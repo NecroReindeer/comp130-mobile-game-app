@@ -14,13 +14,17 @@ HUDText(Label) - class for the HUD text
 TitleText(Label) - class for title text
 """
 
+# Standard python library
 import json
 
+# Kivy modules
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.textinput import TextInput
 from kivy.uix.label import Label
 
+# Own modules
 import server
+
 
 class Screen(FloatLayout):
     """Contain methods relating to all screens.
@@ -56,11 +60,14 @@ class GameOverScreen(Screen):
     show_best -- displays the player's best score
     """
 
-    def L(self, score):
+    def show_final_score(self, score):
         """Set the score text to display the score.
 
         This method sets the game over screen's score text to
         display the given score.
+
+        Arguments:
+        score -- the score to display
         """
 
         self.player_score_text.text = "Score: " + str(score)
@@ -71,6 +78,9 @@ class GameOverScreen(Screen):
         This method requests the high scores for the given level
         from the server, and then sets the high scores and level labels to
         display this information.
+
+        Arguments:
+        level -- the level to show high scores of
         """
 
         high_request = server.get_high_scores(level)
@@ -91,6 +101,11 @@ class GameOverScreen(Screen):
         on the server, and compares it with the given current score.
         If the current score is less than the best, it sets the best
         score text to display the best score.
+
+        Arguments:
+        player -- the player to show the best score of
+        level -- the level to get the score from
+        score -- the new score to compare with the player's best score
         """
 
         best_request = server.get_best_score(player, level)

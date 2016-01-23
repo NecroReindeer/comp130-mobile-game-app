@@ -25,18 +25,14 @@
 
     enemies: [self.red_enemy, self.pink_enemy, self.blue_enemy, self.orange_enemy]
 
-    score:
-
-
-    padding: (self.width - self.height) / 2
+    hud_width: self.width - self.height
 
     PlayArea:
         id: play_area_id
-
         game: root_game
 
-        size: self.parent.height, self.parent.height
-        pos: (self.game.padding, 0)
+        size: self.game.height, self.game.height
+        pos: (self.game.hud_width, 0)
 
         PlayerBeetle:
             id: player_beetle_id
@@ -86,10 +82,11 @@
             id: level_id
             game: root_game
 
+            columns: 8
+            rows: 8
+
             size: self.parent.height, self.parent.width
-            # For some reason it doesn't work if I refer to it directly
-            padding: self.game.padding
-            pos: (self.padding, 0)
+            pos: self.parent.pos
 
             cell_size: (self.height/self.rows, self.height/self.rows)
             # Initialise 2-dimensional list of correct size
@@ -103,15 +100,16 @@
         lives_label: lives
 
         height: self.game.height
-        width: self.game.padding
+        width: self.game.hud_width
 
         FloatLayout:
             canvas:
                 Color:
-                    rgb: (0.3, 0.1, 0.1)
+                    rgb: 0, 0, 0
                 Rectangle:
                     pos: self.pos
                     size: self.size
+
             HUDText:
                 id: name
                 game: root_game
@@ -142,6 +140,7 @@
                 pos_hint: {'x': 0.1, 'top': 0.5}
                 text: "Score: " + str(self.game.score)
 
+
 <Cell>
     left_edge: left_edge_id
     right_edge: right_edge_id
@@ -152,6 +151,9 @@
     # Size of cell within the walls
     interior: (self.width - self.width * self.wall_thickness * 2, self.height - self.height * self.wall_thickness * 2)
     edges: [self.left_edge, self.bottom_edge, self.right_edge, self.top_edge]
+
+    sides: 4
+    wall_thickness: 0.1
 
     CellEdge:
         id: left_edge_id
@@ -183,15 +185,17 @@
         Rotate:
             origin: self.center
             # Because the image has the character facing up
-            angle: self.orientation + 90
+            angle: self.rotation_angle + 90
         Rectangle:
             source: self.source_image
             pos: self.pos
             size: self.size
         PopMatrix
 
+
 <EnemyBeetle>
     frightened_image: "images/frightened.png"
+
 
 <RedBeetle>
     normal_image: "images/red.png"
@@ -201,7 +205,7 @@
         Rotate:
             origin: self.center
             # Because the image has the character facing up
-            angle: self.orientation + 90
+            angle: self.rotation_angle + 90
         Rectangle:
             source: self.source_image
             pos: self.pos
@@ -217,7 +221,7 @@
         Rotate:
             origin: self.center
             # Because the image has the character facing up
-            angle: self.orientation + 90
+            angle: self.rotation_angle + 90
         Rectangle:
             source: self.source_image
             pos: self.pos
@@ -233,7 +237,7 @@
         Rotate:
             origin: self.center
             # Because the image has the character facing up
-            angle: self.orientation + 90
+            angle: self.rotation_angle + 90
         Rectangle:
             source: self.source_image
             pos: self.pos
@@ -249,7 +253,7 @@
         Rotate:
             origin: self.center
             # Because the image has the character facing up
-            angle: self.orientation + 90
+            angle: self.rotation_angle + 90
         Rectangle:
             source: self.source_image
             pos: self.pos
@@ -264,17 +268,21 @@
 
 
 <Wall>
+    rotation: 0
+    rotation_origin: 0, 0
+
     canvas:
         Color:
             rgb: (0.3, 0.1, 0.1)
         PushMatrix
         Rotate:
-            angle: self.angle
-            origin: self.origin
+            angle: self.rotation
+            origin: self.rotation_origin
         Rectangle:
             pos: self.pos
             size: self.size
         PopMatrix
+
 
 <Pellet>
     canvas:
@@ -283,6 +291,7 @@
         Ellipse:
             pos: self.pos
             size: self.size
+
 
 <GameOverScreen>
     reset_button: reset

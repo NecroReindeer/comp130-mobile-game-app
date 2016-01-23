@@ -49,9 +49,6 @@ class Character(Widget):
     kill_character() -- set the character to dead
     """
 
-    # Give characters access to other widgets through game widget
-    game = ObjectProperty(None)
-
     # All characters have the following properties
     start_x = NumericProperty(0)
     start_y = NumericProperty(0)
@@ -67,7 +64,7 @@ class Character(Widget):
     next_direction = ObjectProperty(direction.Direction.right)
 
     # Determines the angle the character is displayed
-    orientation = NumericProperty()
+    rotation_angle = NumericProperty()
     source_image = StringProperty()
 
     def move(self):
@@ -136,7 +133,7 @@ class Character(Widget):
 
         self.current_direction = direction.Direction.right
         self.next_direction = direction.Direction.right
-        self.orientation = self.current_direction.get_angle()
+        self.rotation_angle = self.current_direction.get_angle()
 
     def __initialise_position(self, starting_cell):
         self.grid_position = starting_cell.coordinates
@@ -252,7 +249,8 @@ class Character(Widget):
         the direction changes.
         """
 
-        self.orientation = self.current_direction.get_angle()
+        if self.game.game_active:
+            self.rotation_angle = self.current_direction.get_angle()
 
 
 class PlayerBeetle(Character):
@@ -466,8 +464,8 @@ class EnemyBeetle(Character):
     reset_release_timers -- reset the mode to dormant and the timer to its initial state
     """
 
-    pursuing = BooleanProperty(False)
     dormant = BooleanProperty(True)
+    pursuing = BooleanProperty(False)
     frightened = BooleanProperty(False)
     dead = BooleanProperty(False)
 
