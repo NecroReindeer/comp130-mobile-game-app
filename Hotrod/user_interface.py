@@ -25,8 +25,9 @@ import server
 class Screen(FloatLayout):
     """Contain methods relating to all screens.
 
-    This class contains a method that relates to all screens.
-    All menu/UI screens should inherit from it, so that this
+    This abstract class contains a method that relates to all screens.
+    This class should not be instantiated directly.
+    All menu/UI screens should inherit from it, so that its
     method can be called.
     """
 
@@ -55,7 +56,7 @@ class GameOverScreen(Screen):
     show_best -- displays the player's best score
     """
 
-    def show_score(self, score):
+    def L(self, score):
         """Set the score text to display the score.
 
         This method sets the game over screen's score text to
@@ -83,7 +84,7 @@ class GameOverScreen(Screen):
         self.high_scores_text.text = text
         self.level_number_text.text = str(level)
 
-    def show_best(self, player, level, score):
+    def show_best_score(self, player, level, score):
         """Show the player's best score.
 
         This method retrieves the given player's best score stored

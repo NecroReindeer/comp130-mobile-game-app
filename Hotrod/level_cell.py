@@ -133,12 +133,12 @@ class Cell(Widget):
             self.pellet.update_pellet_widget()
 
     def initialise_pellets(self):
-        """Set the type of the pellet in the cell.
+        """Set whether a pellet exists and set its type to normal.
 
         This method sets up the pellet contained in the cell.
         If the cell is in the beetle den or player start position,
         the cell's pellet is removed. Otherwise, the pellet type
-        is assigned and the game's pellet count is increased.
+        is assigned to normal and the game's pellet count is increased.
         """
 
         if self in self.parent.beetle_den.itervalues() or self.coordinates == self.parent.game.player.start_position:
@@ -167,11 +167,13 @@ class Cell(Widget):
         It also binds the pellet's existence to the enemies' frightened state, so
         that remaining enemies still become frightened if the player collects an
         additional power up whilst powered up.
+        The pellet existence is also bound to the players' pow erup activation method.
         """
 
         self.pellet.type = collectable.PelletType.power
         for enemy in self.parent.game.enemies:
             self.bind(pellet_exists=enemy.switch_frightened_state)
+            self.bind(pellet_exists=self.parent.game.player.activate_powerup)
 
 
 class CellEdge(Widget):

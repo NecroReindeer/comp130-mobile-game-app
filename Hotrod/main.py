@@ -21,6 +21,7 @@ import direction
 import level
 import level_cell
 import character
+import server
 import user_interface
 
 # Game to run at 60 frames per second
@@ -161,10 +162,7 @@ class PlayArea(Widget):
 
         self.game.player.move()
         for enemy in self.game.enemies:
-            if enemy.dead:
-                enemy.retreat()
-            else:
-                enemy.move()
+            enemy.move()
 
     def update_play_area(self, instance, value):
         """Ensure that game element sizes are correct.
@@ -227,6 +225,7 @@ class PlayArea(Widget):
                 elif not enemy.dead:
                     self.game.player.kill_character()
 
+
 class HotrodGame(Widget):
     """Manage the game and application.
 
@@ -277,17 +276,20 @@ class HotrodGame(Widget):
     # For managing game state
     game_active = BooleanProperty(False)
 
-    def start(self):
-        """Start the game.
+    def show_start_screen(self):
+        """Show the start screen.
 
-        This method begins game progression. It ensures that
-        all screens are removed and the title music is stopped,
-        before triggering the play area to start the game.
+        This method shows the start screen and plays the title music.
+        It also binds the start screen's button to show the login
+        screen. It ensures that no other screens are displayed by
+        removing them all first.
         """
 
-        self.remove_screens()
-        self.sounds['title'].stop()
-        self.play_area.start_game()
+        self.sounds['title'].play()
+        self.__remove_screens()
+        self.start_screen = user_interface.StartScreen()
+        self.__show_screen(self.start_screen)
+        self.start_screen.start_button.bind(on_press=self.__show_login_screen)
 
     def load_sounds(self):
         """Load the sounds used in the game.
@@ -302,8 +304,214 @@ class HotrodGame(Widget):
             filename, extension = os.path.splitext(file)
             key = filename
             self.sounds[key] = SoundSDL2(source=(os.path.join(SOUND_DIRECTORY, file)))
+
         self.sounds['title'].loop = True
         self.sounds['frightened'].loop = True
+
+    def __start_game(self):
+        """Start the game.
+
+        This method begins game progression. It ensures that
+        all screens are removed and the title music is stopped,
+        before triggering the play area to start the game.
+        """
+
+        self.__remove_screens()
+        self.sounds['title'].stop()
+        self.play_area.start_game()
+
+    def __reset(self, event):
+        """Reset the game after a game over.
+
+        This method initialises the game's properties
+        before restarting the game.
+        """
+
+        self.__initialise_properties()
+        self.__start_game()
+
+    def __initialise_properties(self):
+        """Initialise the game's properties.
+
+        This method sets all of the game's properties to their
+        initial values, as defined by the relative constants.
+        """
+
+        self.level_number = INITIAL_LEVEL
+        self.score = INITIAL_SCORE
+        self.lives = INITIAL_LIVES
+        self.pellet_value = INITIAL_PELLET_VALUE
+        self.kill_value = INITIAL_KILL_VALUE
+
+        self.powerup_length = INITIAL_POWERUP_TIME
+        self.scatter_length = INITIAL_SCATTER_TIME
+        self.chase_length = INITIAL_CHASE_TIME
+        self.speed_multiplier = INITIAL_SPEED_MULTIPLIER
+
+        # Ensure pellet counter starts at 0
+        self.pellet_count = 0
+
+    def __advance_level(self):
+        """Advance to the next level.
+
+        This method stops the game and increases the
+        level count and difficulty, before starting a
+        new game based on these adjusted parameters.
+        """
+
+        self.game_active = False
+        # Increase level number and lives by 1
+        self.level_number += 1
+        self.lives += 1
+        self.__start_game()
+
+    def __increase_difficulty(self):
+        """Increase the difficulty.
+
+        This method increases the difficulty by adjusting the values
+        of the relevant properties by the defined increment, until they
+        will exceed their maximum or minimum values.
+        """
+
+        if self.speed_multiplier <= MAX_SPEED_MULTIPLIER - SPEED_INCREMENT:
+            self.speed_multiplier += SPEED_INCREMENT
+        if self.scatter_length >= MIN_SCATTER_LENGTH - SCATTER_DECREMENT:
+            self.scatter_length += SCATTER_DECREMENT
+        if self.powerup_length >= MIN_POWERUP_LENGTH - POWERUP_TIME_DECREMENT:
+            self.powerup_length += POWERUP_TIME_DECREMENT
+        if self.powerup_limit >= MIN_POWERUP_LIMIT - POWERUP_COUNT_DECREMENT:
+            self.powerup_limit += POWERUP_COUNT_DECREMENT
+
+        self.chase_length += CHASE_INCREMENT
+        self.pellet_value += PELLET_VALUE_INCREMENT
+        self.kill_value += KILL_VALUE_INCREMENT
+
+    def __show_screen(self, screen):
+        """Show a given screen.
+
+        This method displays the given screen. The screens must
+        inherit from user_interface.Screen so that they have the
+        set_size method.
+
+        Arguments:
+        screen - desired screen as a user_interface.Screen
+        """
+
+        screen.size = self.size
+        screen.center = self.center
+        self.add_widget(screen)
+        self.bind(size=screen.set_size)
+        self.screens.append(screen)
+
+    def __remove_screens(self):
+        """Remove all screen widgets.
+
+        This method removes all existing screens from
+        visibility and unbinds them from the game's size.
+        """
+
+        for screen in self.screens:
+            self.remove_widget(screen)
+            self.unbind(size=screen.set_size)
+            self.screens.remove(screen)
+
+    def __show_login_screen(self, event):
+        """Show the login screen.
+
+        This method is triggered by a Kivy event.
+        This method shows the login screen and binds the buttons to
+        the appropriate add user/get user methods.
+        It ensures that no other screens are displaying by
+        removing them all first.
+        """
+
+        self.__remove_screens()
+        self.login_screen = user_interface.LoginScreen()
+        self.__show_screen(self.login_screen)
+        self.login_screen.new_button.bind(on_press=self.__add_new_user)
+        self.login_screen.existing_button.bind(on_press=self.__get_existing_user)
+
+    def __show_game_over_screen(self, event):
+        """Show the game over screen and high scores.
+
+        This method shows the game over screen along with the
+        high scores for the level.
+        The game over screen is displayed until the reset button
+        is pressed.
+        """
+
+        self.sounds['title'].play()
+        self.game_over_screen = user_interface.GameOverScreen()
+        self.__show_screen(self.game_over_screen)
+        self.game_over_screen.L(self.score)
+        self.game_over_screen.show_best_score(self.player_name, self.level_number, self.score)
+        self.game_over_screen.show_high_scores(self.level_number)
+        self.game_over_screen.reset_button.bind(on_press=self.__reset)
+
+    def __add_new_user(self, event):
+        """Add a new user to the game.
+
+        This Kivy property bind event adds a new user to the
+        database and attempts to begin the game.
+        """
+
+        name = self.login_screen.name_text.text
+        UrlRequest('http://bsccg02.ga.fal.io/adduser.py?player=' + name, self.__check_user)
+        self.login_screen.instruction_text.text = "Adding player..."
+        self.login_screen.new_button.disabled = True
+
+    def __get_existing_user(self, event):
+        """Find an existing user in the database.
+
+        This Kivy property bind event sees if the user exists in
+        the database and attempts to begin the game.
+        """
+
+        name = self.login_screen.name_text.text
+        UrlRequest('http://bsccg02.ga.fal.io/getuser.py?player=' + name, self.__check_user)
+        self.login_screen.instruction_text.text = "Logging in..."
+        self.login_screen.existing_button.disabled = True
+
+    def __check_user(self, request, results):
+        """Check if the user login/addition was successful.
+
+        This method checks if the user was added successfully or if
+        an existing player logged in successfully. If it was
+        successful, it begins the game.
+        """
+
+        name = json.loads(results)
+        if name is None:
+            self.login_screen.instruction_text.text = "Invalid name!"
+            self.login_screen.existing_button.disabled = False
+            self.login_screen.existing_button.disabled = False
+        else:
+            self.player_name = name
+            self.__start_game()
+
+    def on_level_number(self, instance, value):
+        """Increase the difficulty after the level advances.
+
+        This Kivy event is called when the level number changes.
+        If the level number is after level 1, the difficulty gets
+        increased.
+        """
+
+        # After level 1, so that difficulty doesn't increase on start
+        if self.level_number != 1:
+            self.__increase_difficulty()
+
+    def on_pellet_count(self, instance, value):
+        """Advance the level when pellets are all gone.
+
+        This Kivy event is called when the pellet count changes.
+        If the pellet count gets to 0, the level advances.
+        """
+
+        # If there are no pellets left
+        if self.pellet_count == 0:
+            if self.game_active:
+                self.__advance_level()
 
     def on_touch_up(self, touch):
         """Detect player swipes and change character's next direction accordingly.
@@ -342,7 +550,7 @@ class HotrodGame(Widget):
 
             if self.lives <= 0:
                 game_over_sound = self.sounds['game_over']
-                game_over_sound.bind(on_stop=self.show_game_over_screen)
+                game_over_sound.bind(on_stop=self.__show_game_over_screen)
                 self.sounds['game_over'].play()
             else:
                 death_sound = self.sounds['death']
@@ -367,185 +575,6 @@ class HotrodGame(Widget):
             Clock.schedule_interval(self.play_area.update, 1.0/FPS)
         else:
             Clock.unschedule(self.play_area.update)
-
-    def show_screen(self, screen):
-        """Show a given screen.
-
-        This method displays the given screen. The screens must
-        inherit from user_interface.Screen so that they have the
-        set_size method.
-
-        Arguments:
-        screen - desired screen as a user_interface.Screen
-        """
-
-        screen.size = self.size
-        screen.center = self.center
-        self.add_widget(screen)
-        self.bind(size=screen.set_size)
-        self.screens.append(screen)
-
-    def remove_screens(self):
-        """Remove all screen widgets.
-
-        This method removes all existing screens from
-        visibility and unbinds them from the game's size.
-        """
-
-        for screen in self.screens:
-            self.remove_widget(screen)
-            self.unbind(size=screen.set_size)
-            self.screens.remove(screen)
-
-    def show_start_screen(self):
-        """Show the start screen.
-
-        This method shows the start screen and plays the title music.
-        It also binds the start screen's button to show the login
-        screen. It ensures that no other screens are displayed by
-        removing them all first.
-        """
-
-        self.sounds['title'].play()
-        self.remove_screens()
-        self.start_screen = user_interface.StartScreen()
-        self.show_screen(self.start_screen)
-        self.start_screen.start_button.bind(on_press=self.show_login_screen)
-
-    def show_login_screen(self, event):
-        """Show the login screen.
-
-        This method is triggered by a Kivy event.
-        This method shows the login screen and binds the buttons to
-        the appropriate add user/get user methods.
-        It ensures that no other screens are displaying by
-        removing them all first.
-        """
-
-        self.remove_screens()
-        self.login_screen = user_interface.LoginScreen()
-        self.show_screen(self.login_screen)
-        self.login_screen.new_button.bind(on_press=self.add_user)
-        self.login_screen.existing_button.bind(on_press=self.get_user)
-
-    def add_user(self, event):
-        name = self.login_screen.name_text.text
-        UrlRequest('http://bsccg02.ga.fal.io/adduser.py?player=' + name , self.check_user)
-        self.login_screen.instruction_text.text = "Adding player..."
-
-    def get_user(self, event):
-        name = self.login_screen.name_text.text
-        UrlRequest('http://bsccg02.ga.fal.io/getuser.py?player=' + name, self.check_user)
-        self.login_screen.instruction_text.text = "Logging in..."
-
-    def check_user(self, request, results):
-        """Check if the user login/addition was successful.
-
-        This method checks if the user was added successfully or if
-        an existing player logged in successfully. If it was
-        successful, it begins the game.
-        """
-
-        name = json.loads(results)
-        if name is None:
-            self.login_screen.instruction_text.text = "Invalid name!"
-        else:
-            self.player_name = name
-            self.start()
-
-    def show_game_over_screen(self, event):
-        """Show the game over screen and high scores.
-
-        This method shows the game over screen along with the
-        high scores for the level.
-        The game over screen is displayed until the reset button
-        is pressed.
-        """
-
-        self.sounds['title'].play()
-        self.game_over_screen = user_interface.GameOverScreen()
-        self.show_screen(self.game_over_screen)
-        self.game_over_screen.show_score(self.score)
-        self.game_over_screen.show_best(self.player_name, self.level_number, self.score)
-        self.game_over_screen.show_high_scores(self.level_number)
-        self.game_over_screen.reset_button.bind(on_press=self.reset)
-
-    def reset(self, event):
-        """Reset the game after a game over.
-
-        This method initialises the game's properties
-        before restarting the game.
-        """
-
-        self.initialise_properties()
-        self.start()
-
-    def initialise_properties(self):
-        """Initialise the game's properties.
-
-        This method sets all of the game's properties to their
-        initial values, as defined by the relative constants.
-        """
-
-        self.level_number = INITIAL_LEVEL
-        self.score = INITIAL_SCORE
-        self.lives = INITIAL_LIVES
-        self.pellet_value = INITIAL_PELLET_VALUE
-        self.kill_value = INITIAL_KILL_VALUE
-
-        self.powerup_length = INITIAL_POWERUP_TIME
-        self.scatter_length = INITIAL_SCATTER_TIME
-        self.chase_length = INITIAL_CHASE_TIME
-        self.speed_multiplier = INITIAL_SPEED_MULTIPLIER
-
-        # Ensure pellet counter starts at 0
-        self.pellet_count = 0
-
-    def advance_level(self):
-        """Advance to the next level.
-
-        This method stops the game and increases the
-        level count and difficulty, before starting a
-        new game based on these adjusted parameters.
-        """
-
-        self.game_active = False
-        # Increase level number and lives by 1
-        self.level_number += 1
-        self.lives += 1
-        self.start()
-
-    def increase_difficulty(self):
-        """Increase the difficulty.
-
-        This method increases the difficulty by adjusting the values
-        of the relevant properties by the defined increment, until they
-        will exceed their maximum or minimum values.
-        """
-
-        if self.speed_multiplier <= MAX_SPEED_MULTIPLIER - SPEED_INCREMENT:
-            self.speed_multiplier += SPEED_INCREMENT
-        if self.scatter_length >= MIN_SCATTER_LENGTH - SCATTER_DECREMENT:
-            self.scatter_length += SCATTER_DECREMENT
-        if self.powerup_length >= MIN_POWERUP_LENGTH - POWERUP_TIME_DECREMENT:
-            self.powerup_length += POWERUP_TIME_DECREMENT
-        if self.powerup_limit >= MIN_POWERUP_LIMIT - POWERUP_COUNT_DECREMENT:
-            self.powerup_limit += POWERUP_COUNT_DECREMENT
-
-        self.chase_length += CHASE_INCREMENT
-        self.pellet_value += PELLET_VALUE_INCREMENT
-        self.kill_value += KILL_VALUE_INCREMENT
-
-    def on_level_number(self, instance, value):
-        # Difficulty increases after level 1
-        if self.level_number != 1:
-            self.increase_difficulty()
-
-    def on_pellet_count(self, instance, value):
-        # If there are no pellets left
-        if self.pellet_count == 0:
-            if self.game_active:
-                self.advance_level()
 
 
 class HotrodApp(App):

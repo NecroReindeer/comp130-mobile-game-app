@@ -39,9 +39,7 @@ class Character(Widget):
     move() -- move the character. Should be called every frame.
     initialise() -- set up the size and position of the character
     update_character() -- ensure that the size and position is correct
-
-    Kivy Properties:
-    color -- ObjectProperty storing the color of the character
+    kill_character() -- set the character to dead
     """
 
     # Give characters access to other widgets through game widget
@@ -116,6 +114,8 @@ class Character(Widget):
         self._initialise_bindings()
 
     def kill_character(self):
+        """Set the character to dead."""
+
         self.dead = True
 
     def __initialise_direction(self):
@@ -136,13 +136,19 @@ class Character(Widget):
         self.center = starting_cell.center
 
     def __initialise_size(self, starting_cell):
+        """Set the character's size to the interior of the cell."""
+
         # Set size to interior of cell size
         self.size = starting_cell.interior
 
     def __initialise_image(self):
+        """Set the character's source image to their normal image."""
+
         self.source_image = self.normal_image
 
     def _initialise_bindings(self):
+        """Create any Kivy bindings for the characters."""
+
         self.bind(grid_position=self.game.play_area.check_character_collisions)
 
     def _check_position_validity(self):
@@ -251,7 +257,6 @@ class PlayerBeetle(Character):
 
     Kivy Events:
     on_last_chomp_high -- alternate the chomp sound
-    on_grid_position -- check for enemy collisions
     on_dead -- remove life if player is dead
 
     Kivy Properties:
@@ -278,11 +283,25 @@ class PlayerBeetle(Character):
         self.__initialise_states()
         Character.initialise(self)
 
+    def activate_powerup(self, instance, value):
+        """Ensure that powerup is activated correctly.
+
+        This method fully activates the powerup, by scheduling
+        the method that removes the powerup for the appropriate amount of time.
+        """
+
+        # Unschedule remove powerup so that full length of additional pellets is experienced
+        Clock.unschedule(self.__remove_powerup)
+        self.game.sounds['power_up'].play()
+        self.powered_up = True
+        Clock.schedule_once(self.__remove_powerup, self.game.powerup_length)
+
     def __initialise_chomp_sound(self):
         """Initialise the chomp sound.
 
         This method initialises the sound played when the player
-        eats a pellet so that it begins with the high note."""
+        eats a pellet so that it begins with the high note.
+        """
 
         # Always start with high note
         self.last_chomp_high = False
@@ -305,7 +324,7 @@ class PlayerBeetle(Character):
         Character._initialise_bindings(self)
 
     def __check_pellet_collision(self):
-        """Check for pellet collision.
+        """Check for pellet collisions.
 
         This method checks if the player has collided with any pellets.
         If so, the score is adjusted or a power-up is applied appropriately.
@@ -313,10 +332,6 @@ class PlayerBeetle(Character):
 
         current_cell = self.game.level.get_cell(self.grid_position)
         if current_cell.pellet_exists:
-            if current_cell.pellet.type == collectable.PelletType.power:
-                self.__activate_powerup()
-                # Here so that it still plays if you collect another
-                self.game.sounds['power_up'].play()
             self.__eat_pellet(current_cell)
 
     def __eat_pellet(self, current_cell):
@@ -331,18 +346,6 @@ class PlayerBeetle(Character):
         self.game.score += self.game.pellet_value
         self.chomp_sound.play()
         self.last_chomp_high = not self.last_chomp_high
-
-    def __activate_powerup(self):
-        """Ensure that powerup is activated correctly.
-
-        This method fully activates the powerup, by scheduling
-        the method that removes the powerup for the appropriate amount of time.
-        """
-
-        # Unschedule remove powerup so that full length of additional pellets is experienced
-        Clock.unschedule(self.__remove_powerup)
-        self.powered_up = True
-        Clock.schedule_once(self.__remove_powerup, self.game.powerup_length)
 
     def __remove_powerup(self, dt):
         """Remove the power-up status from the player.
@@ -359,7 +362,12 @@ class PlayerBeetle(Character):
 
         This Kivy event is triggered when the players power up
         state changes. If the player is powered up, the frightened
-        noise is played and the powerup is activated.
+        noise is played and the player's image is changed.
+
+        Note: The things in this method are things that
+        should happen only when the player changes state between
+        powered-up and not powered-up, not the things that should
+        happen when the player collects a power-up.
         """
 
         if self.powered_up:
@@ -386,10 +394,10 @@ class PlayerBeetle(Character):
             self.chomp_sound = self.game.sounds["chomp_high"]
 
     def on_grid_position(self, instance, value):
-        """Check for enemy and pellet collisions on grid position change.
+        """Check for pellet collisions on grid position change.
 
-        When the player grid position changes, this kivy event is called
-        and checks if player has collided with an enemy or pellet.
+        When the player grid position changes, this Kivy event is called
+        and checks if player has collided with a pellet.
         """
 
         self.__check_pellet_collision()
@@ -417,7 +425,7 @@ class EnemyBeetle(Character):
     Kivy Properties:
     pursuing -- BooleanProperty that indicates which mode the enemy is in
     dormant -- BooleanProperty that indicates whether the enemy is dormant
-    fleeing -- BooleanProperty that indicates whether the enemy is fleeing
+    frightened -- BooleanProperty that indicates whether the enemy is frightened
     dead -- BooleanProperty that indicates whether the enemy is dead
     scatter_length -- NumericProperty representing the length of scatter mode
     chase_length -- NumericProperty representing the length of chase mode
@@ -444,8 +452,17 @@ class EnemyBeetle(Character):
     mode_change_paused = BooleanProperty(False)
 
     def move(self):
-        self._set_next_direction()
-        Character.move(self)
+        """Move the character.
+
+        This method moves the character and ensures
+        that characters are positioned correctly. It should be
+        called every frame.
+        """
+        if self.dead:
+            self.retreat()
+        else:
+            self._set_next_direction()
+            Character.move(self)
 
     def retreat(self):
         """Move the enemy to the beetle den.

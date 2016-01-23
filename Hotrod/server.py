@@ -1,7 +1,7 @@
 """Contain functions for accessing the server.
 
 This module contains functions for accessing the server that
-handles the database of high scores.
+handles the database of players and high scores.
 """
 
 from kivy.network.urlrequest import UrlRequest
@@ -55,3 +55,4 @@ def update_high_score(player, level, score):
     request = UrlRequest('http://bsccg02.ga.fal.io/updatescore.py?player=' + player +
                '&level=' + str(level) + '&score=' + str(score))
     return request
+
