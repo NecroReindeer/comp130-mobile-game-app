@@ -14,23 +14,23 @@ Some of the other design decisions about the structure of my code were made with
 ###character
 Contains classes for the enemies and player
 
-###collectable
+####collectable
 Contains a class for pellets and power-ups. 
 It was originally going to contain classes for other collectables, such as lives and other score items. I did not have time to add those additional features in this assignment.
 
-###direction
+####direction
 Contains enum class to represent the directions up, left, down and right.
 
-###level
+####level
 Contains a class for the level with methods for level generation.
 
-###level_cell
+####level_cell
 Contains classes relating to the cells of the levels, including the cell itself and its edges.
 
-###server
+####server
 Contains functions for accessing the server where high scores are kept
 
-###user_interface
+####user_interface
 Contains classes relating to any graphical user interface elements, such as the start and game over screen.
 
 ##Assets
