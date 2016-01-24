@@ -38,30 +38,36 @@ import character
 import server
 import user_interface
 
-# Game to run at 60 frames per second
+
+# Number of frames per second the game should run at
 FPS = 60
 # The relative location of the game's sound files
 SOUND_DIRECTORY = "sound"
 
-# The player always starts with 3 lives
+# The values specified below were chosen to tune the game's difficulty
+
+# These are initial values generic properties that the game keeps track of
+# Number of lives the player starts with
 INITIAL_LIVES = 3
-# The player's score always starts at 0
+# The initial score the player starts with
 INITIAL_SCORE = 0
-# Initial level should always be 1
+# The level number of the initial level
 INITIAL_LEVEL = 1
 
-# Kills start out worth 100 points
+# These are initial values of properties that modify the games's difficulty/rewards
+# The points that kills add on the first level
 INITIAL_KILL_VALUE = 100
-# Pellets start out worth 10 points
+# The points that pellets add on the first level
 INITIAL_PELLET_VALUE = 10
-# 6 powerups are spawned at the start
+# The number of powerups spawned on the first level
 INITIAL_POWERUP_LIMIT = 6
-# The powerup lasts 10 seconds at the start
+# The length of time in seconds powerups last on the first level
 INITIAL_POWERUP_TIME = 10
-# Scatter and chase times are 7 and 15 respectively at the start
-INITIAL_SCATTER_TIME = 7
+# The number of consecutive seconds enemies target the player for
 INITIAL_CHASE_TIME = 15
-# The movement speed starts at 1
+# The number of consecutive seconds enemies stop targeting the player
+INITIAL_SCATTER_TIME = 7
+# The movement speed of characters on the first level
 INITIAL_SPEED_MULTIPLIER = 1
 
 # These are the adjustments applied to the respective property when the level advances
@@ -74,7 +80,7 @@ SCATTER_DECREMENT = -1
 POWERUP_TIME_DECREMENT = -1
 POWERUP_LIMIT_DECREMENT = -1
 
-# These are the maximum/minimum values the properties can take
+# These are the maximum/minimum values the adjusted properties can take
 MAX_SPEED_MULTIPLIER = 2
 MAX_PELLET_VALUE = 100
 MIN_SCATTER_LENGTH = 0
@@ -89,6 +95,15 @@ class PlayArea(Widget):
     This widget represents the gameplay area. The gameplay objects are children of this widget.
     This class handles anything relating to the graphical representation of the game and the
     mechanics of the game. This includes level generation, movement updates, and character initialisation.
+
+    Public methods:
+    start_game -- begins the game
+
+    Kivy Events:
+    update -- updates the game/moves the characters
+    reset_after_death -- restarts the level after player dies
+    update_play_area -- ensures play area is sized correctly
+    check_character_collisions -- check if player has collided with enemy
     """
 
     def start_game(self):
@@ -99,13 +114,13 @@ class PlayArea(Widget):
         after a game over, or on a new level.
         """
 
-        self.set_up_level()
+        self.__set_up_level()
         jingle = self.game.sounds['jingle']
         jingle.play()
         # Gameplay doesn't proceed until the jingle has finished
-        jingle.bind(on_stop=self.start_updates)
+        jingle.bind(on_stop=self.__start_updates)
 
-    def set_up_level(self):
+    def __set_up_level(self):
         """Set up the level and characters.
 
         This method initialises the generates the level and
@@ -113,10 +128,10 @@ class PlayArea(Widget):
         a new game or level starts.
         """
 
-        self.generate_level()
-        self.reset_characters()
+        self.__generate_level()
+        self.__reset_characters()
 
-    def generate_level(self):
+    def __generate_level(self):
         """Generate the level.
 
         This method procedurally generates the maze to be
@@ -125,11 +140,12 @@ class PlayArea(Widget):
         """
 
         seed = random.randint(0, sys.maxint)
+        # Print seed for debugging purposes
         print seed
         random.seed(seed)
         self.game.level.generate_level()
 
-    def reset_characters(self):
+    def __reset_characters(self):
         """Completely reset the characters.
 
         This method ensures the characters' size, positions and
@@ -142,7 +158,7 @@ class PlayArea(Widget):
         for enemy in self.game.enemies:
             enemy.reset_character()
 
-    def initialise_characters(self):
+    def __initialise_characters(self):
         """Initialise the characters.
 
         This method ensures the characters' size, positions and
@@ -155,8 +171,8 @@ class PlayArea(Widget):
         for enemy in self.game.enemies:
             enemy.initialise()
 
-    def start_updates(self, event):
-        """Start the game updating.
+    def __start_updates(self, event):
+        """Start the game's updates.
 
         This method begins the actual gameplay by setting the
         game_active property to True, as well as beginning
@@ -166,21 +182,10 @@ class PlayArea(Widget):
         begins after the jingle stops playing.
         """
 
-        self.start_enemy_timers()
+        self.__start_enemy_timers()
         self.game.game_active = True
 
-    def update(self, dt):
-        """Update the game state.
-
-        This method should be called once every frame. It updates the
-        state of the game, in this case, the characters' positions.
-        """
-
-        self.game.player.move()
-        for enemy in self.game.enemies:
-            enemy.move()
-
-    def start_enemy_timers(self):
+    def __start_enemy_timers(self):
         """Start the timers for the enemies' mode changes and release.
 
         This method initialises the timers that count down
@@ -194,8 +199,20 @@ class PlayArea(Widget):
         """
 
         for enemy in self.game.enemies:
-            enemy.start_scatter_timer()
+            enemy.start_mode_change_timer()
             enemy.start_activation_timer()
+
+    def update(self, dt):
+        """Update the game state.
+
+        This method should be scheduled on the Kivy clock to be called once every frame.
+        It updates the state of the game.
+        (currently, in this case, only the characters' positions)
+        """
+
+        self.game.player.move()
+        for enemy in self.game.enemies:
+            enemy.move()
 
     def reset_after_death(self, event):
         """Reset the characters' positions and reset the scatter timer.
@@ -204,18 +221,20 @@ class PlayArea(Widget):
         as resetting the enemies' chase mode change timers.
         It should only be called when the player has lost a life
         without it resulting in a game over.
+        This is a Kivy property event binding so that it happens after
+        the death jingle has finished playing.
         """
 
-        self.initialise_characters()
+        self.__initialise_characters()
         for enemy in self.game.enemies:
-            enemy.start_scatter_timer()
+            enemy.start_mode_change_timer()
         self.game.game_active = True
 
-    def update_play_area(self, instance, value):
+    def update_play_area_size(self, instance, value):
         """Ensure that game element sizes are correct.
 
         This Kivy event is triggered when window/level size changes to ensure
-        that all elements of the play area are positioned and sized correctly
+        that all elements of the play area are positioned and sized correctly.
         """
 
         for column in self.game.level.cells:
@@ -223,8 +242,8 @@ class PlayArea(Widget):
                 cell.update_cell()
 
         for enemy in self.game.enemies:
-            enemy.update_character()
-        self.game.player.update_character()
+            enemy.update_character_size()
+        self.game.player.update_character_size()
 
     def check_character_collisions(self, instance, value):
         """Check for character collisions.
@@ -255,6 +274,39 @@ class HotrodGame(Widget):
     It stores general information relating to the game that is of
     use to the user, such as score and lives.
     Gameplay widgets access each other through this widget.
+
+    Public methods:
+    show_start_screen -- displays the start screen
+    load_sounds -- loads the game's sounds
+
+    Kivy events:
+    on_pellet_count -- checks if level has been completed
+    on_level_number -- advances to the next level
+    on_lives -- restarts level/ends game when player loses life
+    on_game_active -- starts and stops updates
+    on_touch_up -- built in Kivy event that detects touch from user
+
+    Kivy properties:
+    score -- NumericProperty to track player's score
+    lives -- NumericProperty to track player's remaining lives
+    level_number -- NumericProperty to track the level number
+    player_name -- StringProperty to store the player's name
+    pellet_count -- NumericProperty for counting how many pellets remain
+    powerup_limit -- NumericProperty storing the number of powerups that can spawn
+    powerup_length -- NumericProperty storing the number of seconds a powerup lasts
+    scatter_length -- NumericProperty storing the number of seconds the enemies scatter
+    chase_length -- NumericProperty storing the number of seconds the enemies target the player
+    speed_multiplier -- NumericProperty storing the value the character's base speed will be multiplied by
+    pellet_value -- NumericProperty storing the number of points pellets are worth
+    kill_value -- NumericProperty storing the number of points kills are worth
+    screens -- ListProperty to track screens that are currently displayed
+    game_over_screen -- ObjectProperty to store a reference to the game over screen
+    start_screen -- ObjectProperty to store a reference to the start screen
+    login_screen -- ObjectProperty to store a reference to the login screen
+    sounds -- ObjectProperty to store a dictionary of sound assets for the game
+    game_active -- BooleanProperty to keep track of whether the game is in progress
+    enemies -- ListProperty to store a list of all the enemies (kv file)
+    hud_width -- NumericProperty to store the width of the HUD (kv file)
     """
 
     # General properties game keeps track of
@@ -262,7 +314,7 @@ class HotrodGame(Widget):
     lives = NumericProperty(INITIAL_LIVES)
     level_number = NumericProperty(INITIAL_LEVEL)
     player_name = StringProperty()
-    # Pellet_count should always begin at 0
+    # Pellet counter should start counting from 0
     pellet_count = NumericProperty(0)
 
 

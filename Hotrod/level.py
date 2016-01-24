@@ -360,7 +360,7 @@ class Level(Widget):
         """
         cell = level_cell.Cell()
         # Bind here so that cells are created before event can be triggered
-        self.bind(size=self.game.play_area.update_play_area, pos=self.game.play_area.update_play_area)
+        self.bind(size=self.game.play_area.update_play_area_size, pos=self.game.play_area.update_play_area_size)
         cell.size = self.cell_size
         cell.pos = self.convert_to_window_position((x, y))
         cell.coordinates = x, y
