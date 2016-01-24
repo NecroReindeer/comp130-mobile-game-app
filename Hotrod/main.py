@@ -239,7 +239,7 @@ class PlayArea(Widget):
 
         for column in self.game.level.cells:
             for cell in column:
-                cell.update_cell()
+                cell.update_cell_size()
 
         for enemy in self.game.enemies:
             enemy.update_character_size()

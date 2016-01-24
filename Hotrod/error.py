@@ -1,4 +1,4 @@
-__author__ = 'Hat'
+"""Contain custom exceptions."""
 
 class NonExistentCellError(Exception):
     pass

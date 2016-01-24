@@ -46,7 +46,6 @@
             id: red_beetle
             game: root_game
 
-            # Red beetle becomes active immediately
             activation_timer: 0
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
@@ -54,7 +53,6 @@
             id: pink_beetle
             game: root_game
 
-            # Pink beetle becomes active after 10 seconds
             activation_timer: 10
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
@@ -62,7 +60,6 @@
             id: blue_beetle
             game: root_game
 
-            # Blue beetle becomes active after 20 seconds
             activation_timer: 20
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
@@ -70,9 +67,7 @@
             id: orange_beetle
             game: root_game
 
-            # Flees if closer than 4 spaces from player
             flee_distance: 4
-            # Orange beetle becomes active after 30 seconds
             activation_timer: 30
             speed: self.game.level.cell_size[0] * 1.0 / FPS * self.game.speed_multiplier
 
@@ -171,7 +166,6 @@
 
     Pellet:
         id: pellet_id
-        coordinates: self.parent.coordinates
 
 
 <PlayerBeetle>
@@ -260,6 +254,7 @@
 
 
 <CellEdge>
+    # So that walls overlap on the outside of corners
     height: self.parent.height + (2 * self.parent.height * self.parent.wall_thickness)
     width: self.parent.width * self.parent.wall_thickness
     pos: (self.parent.pos[0], self.parent.pos[1] - self.parent.height * self.parent.wall_thickness)
@@ -283,6 +278,8 @@
 
 
 <Pellet>
+    color: 0, 0, 0
+
     canvas:
         Color:
             rgb: self.color
@@ -290,7 +287,7 @@
             pos: self.pos
             size: self.size
 
-
+# Values used in all user interface widgets below are just what worked
 <GameOverScreen>
     reset_button: reset
     game_over_text: game_over_text
@@ -302,7 +299,6 @@
 
     BoxLayout:
         orientation: 'horizontal'
-
         canvas:
             Color:
                 rgba: 0, 0, 0, 1
@@ -391,6 +387,7 @@
             color: (0, 0, 0, 1)
             text: "Start"
 
+
 <LoginScreen>
     new_button: new
     existing_button: existing
@@ -445,6 +442,7 @@
                     color: (0, 0, 0, 1)
                     text: "Log in"
 
+
 <NameInput>
     multiline: False
     cursor_color: (1, 0, 0, 1)
@@ -458,6 +456,7 @@
         Line:
             rectangle: self.x,self.y,self.width,self.height
 
+
 <HUDText>
     size_hint_x: 1
     size_hint_y: None
@@ -465,6 +464,7 @@
     text_size: self.width, None
     font_size: self.width / 8
     height: self.texture_size[1]
+
 
 <TitleText>
     pos_hint: {'center_x': 0.5, 'top': 0.9}

@@ -60,10 +60,11 @@ class Character(Widget):
     next_direction -- ObjectProperty to store a direction.Direction for the pending movement direction
     rotation_angle -- NumericProperty representing the angle of rotation of the character in degrees
     source_image -- StringProperty defining location of image to be used for character
+    normal_image -- StringProperty defining location of image to use for character when normal (kv file)
     speed -- NumericProperty defining movement speed (in kv file)
     """
 
-    # All characters have the following properties
+    # All characters have properties in this class
     start_x = NumericProperty()
     start_y = NumericProperty()
     start_position = ReferenceListProperty(start_x, start_y)
@@ -300,6 +301,7 @@ class PlayerBeetle(Character):
     powered_up -- BooleanProperty storing whether the player is powered up
     last_chomp_high -- BooleanProperty storing whether the last chomp sound was the high version
     chomp_sound -- ObjectProperty for storing the sound to be played when pellet is collected
+    power_image -- StringProperty for defining the location of image to use when player is powered up (kv file)
     """
 
     dead = BooleanProperty(False)
@@ -504,14 +506,12 @@ class EnemyBeetle(Character):
     mode_change_timer -- the number of seconds the next chase/scatter mode change will be scheduled for
     mode_change_start -- stores when the last chase/scatter mode change was for pausing it
     mode_time_remaining -- stores how much time remaining until next chase/scatter mode change for resuming it
+    frightened_image -- StringProperty with path to image to be used for enemy when frightened (kv file)
 
     Kivy Events:
-    on_dead --
-    on_frightened --
-    switch_frightened_state --
-
-
-
+    on_dead -- plays enemy death sound
+    on_frightened -- changes image used for enemy
+    switch_frightened_state -- changes enemy state to frightened
     """
 
     dormant = BooleanProperty(True)
@@ -697,8 +697,6 @@ class EnemyBeetle(Character):
         else:
             self.mode_change_timer = self.scatter_length
             Clock.schedule_once(self.__change_mode, self.mode_change_timer)
-
-        print self, "New mode: ", self.chasing, Clock.get_time()
 
     def __deactivate(self):
         """Change enemy state to dormant."""

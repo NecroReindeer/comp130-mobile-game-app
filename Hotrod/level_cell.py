@@ -34,7 +34,7 @@ class Cell(Widget):
     keeps track of the cell's edges.
     It must be instantiated as a child of the level.Level class.
 
-    Children:
+    Widget Children:
     Four CellEdge widgets
     collectable.Pellet widget
 
@@ -46,6 +46,16 @@ class Cell(Widget):
     update_cell -- update the cell's size and position
     initialise_pellets -- set the cell's pellet's type
     remove_pellet -- remove the cell's pellet
+
+    Kivy Properties:
+    coordinates_x -- NumericProperty to store the cell's x grid coordinates
+    coordinates_y -- NumericProperty to store the cell's y grid coordinates
+    coordinates -- ReferenceListProperty to store the cell's grid coordinates
+    pellet_exists -- BooleanProperty to determine whether the cell contains a pellet
+    interior -- the dimensions of the interior of the cell (kv file)
+    edges -- ListProperty storing references to the cell's edges (kv file)
+    sides -- NumericProperty storing the number of sides the cell has (kv file)
+    wall_thickness -- NumericProperty storing the size of the cell's walls relative to the cell (kv file)
     """
 
     coordinates_x = NumericProperty(0)
@@ -72,7 +82,7 @@ class Cell(Widget):
     def all_edges_initialised(self):
         """Check if all cell edges have been initialised.
 
-        This method returns true if all cell edges have
+        This method returns True if all cell edges have
         been assigned a type.
         """
 
@@ -84,7 +94,7 @@ class Cell(Widget):
     def get_random_uninitialised_direction(self):
         """Return a random direction with an uninitialised edge.
 
-        This method returns a random direction where the edge has
+        This method returns a random direction.Direction where the edge has
         not yet been assigned a type.
         """
 
@@ -105,8 +115,8 @@ class Cell(Widget):
                 walls.append(edge)
         return walls
 
-    def update_cell(self):
-        """Update the cell and its children's size and position
+    def update_cell_size(self):
+        """Update the cell and its children's size and position.
 
         This method ensures that cells are the correct size and that their
         children's sizes and positions are set accordingly. It should be
@@ -224,6 +234,11 @@ class Wall(Widget):
 
 
 class CellEdgeType(Enum):
+    """Store enumerations for cell edge types.
+
+    This is an enum to represent the types an edge can have.
+    """
+
     # Arbitrary numbers for enum
     passage = 0
     wall = 1

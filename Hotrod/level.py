@@ -13,7 +13,9 @@ import random
 # Kivy modules
 from kivy.uix.widget import Widget
 from kivy.vector import Vector
-from kivy.properties import ObjectProperty, NumericProperty, ListProperty
+from kivy.properties import ObjectProperty
+from kivy.properties import NumericProperty
+from kivy.properties import ListProperty
 
 # Own modules
 import direction
@@ -34,17 +36,24 @@ class Level(Widget):
     """Store methods required for level generation and management.
 
     This class stores methods and properties relating to level generation and
-    level management. An array of cells is stored in this class to provide acces
+    level management. An array of cells is stored in this class to provide access
     to cells.
 
     Public methods:
-    generate_level() -- start level generation process
-    get_cell((x, y)) -- return the cell at the given grid coordinates
-    get_adjacent_cell(cell, direction) -- return the adjacent cell in a given direction
-    convert_to_grid_position((x, y)) -- convert window coordinates to grid coordinates
-    convert_to_window_position((x, y)) -- convert grid coordinates to window coordinates
+    generate_level -- start level generation process
+    get_cell -- return the cell at the given grid coordinates
+    get_adjacent_cell -- return the adjacent cell in a given direction
+    convert_to_grid_position -- convert window coordinates to grid coordinates
+    convert_to_window_position -- convert grid coordinates to window coordinates
 
-    Children:
+    Kivy Properties:
+    cells -- ListProperty to keep references to level's cells
+    beetle_den -- ObjectProperty to store a dictionary to keep track of beetle den
+    rows -- Number of rows the maze should have (kv file)
+    columns -- Number of columns the maze should have (kv file)
+    cell_size -- The size of a cell (kv file)
+
+    Widget Children:
     level_cell.Cell instances (after level generation)
     """
 
@@ -140,6 +149,8 @@ class Level(Widget):
         This method begins the process of procedurally generating a maze using the Growing Tree Algorithm
         (described here http://weblog.jamisbuck.org/2011/1/27/maze-generation-growing-tree-algorithm)
         The cell to start generation from is chosen randomly, before beginning the full maze generation process.
+        I have implemented this algorithm in the past using the tutorial below, so referred to that at some points:
+        http://catlikecoding.com/unity/tutorials/maze/
         """
 
         # List of active cells used in generation algorithm
@@ -148,6 +159,7 @@ class Level(Widget):
         first_cell_coordinates = self.__get_random_coordinates()
         active_cells.append(self.__create_cell(first_cell_coordinates))
 
+        # Keep generating until no cells remain
         while len(active_cells) > 0:
             self.__generate_cells(active_cells)
 
@@ -162,7 +174,7 @@ class Level(Widget):
         """
 
         # Determines which index the algorithm generates from. Changing this yields different results.
-        current_index = len(active_cells) - 1         # Last index
+        current_index = len(active_cells) - 1         # This generates from last index
         current_cell = active_cells[current_index]
 
         if current_cell.all_edges_initialised():
@@ -230,6 +242,7 @@ class Level(Widget):
         cell - the level_cell.Cell whose edge will be changed
         direction - the direction of the edge to be changed as a direction.Direction
         """
+
         edge = cell.get_edge(direction)
         adjacent_cell = self.get_adjacent_cell(cell, direction)
 
@@ -251,6 +264,7 @@ class Level(Widget):
         cell - the level_cell.Cell whose edge will be changed
         direction - the direction of the edge to be changed as a direction.Direction
         """
+
         edge = cell.get_edge(direction)
         edge.type = level_cell.CellEdgeType.wall
         adjacent_cell = self.get_adjacent_cell(cell, direction)
@@ -270,6 +284,7 @@ class Level(Widget):
         cell - the level_cell.Cell whose edges will be changed
         directions - tuple of direction.Direction specifying where walls should be
         """
+
         for edge in cell.edges:
             if edge.direction in directions:
                 self.__set_edge_to_wall(cell, edge.direction)
@@ -279,10 +294,11 @@ class Level(Widget):
     def __create_den(self):
         """Create a den area that enemies will come from.
 
-        This method creats a den area that will serve as the base for
+        This method creates a den area that will serve as the base for
         enemy beetles. The den placement is random, and based on the
         position of its center cell.
         """
+
         self.beetle_den = {}
 
         center_coords = self.__get_den_center()
@@ -300,6 +316,7 @@ class Level(Widget):
 
     def __get_den_center(self):
         """Choose random grid coordinates for the center of the den area."""
+
         # +/- 1 on each x coord to account for cell on either side of center
         den_center_coords = (random.randrange(BEETLE_DEN_PADDING_X + 1, self.columns - BEETLE_DEN_PADDING_X - 1),
                              random.randrange(BEETLE_DEN_PADDING_Y, self.rows - BEETLE_DEN_PADDING_Y))
@@ -330,6 +347,7 @@ class Level(Widget):
         """
 
         for cell in self.beetle_den.itervalues():
+            # Couldn't use direction as variable name as that is module name
             for dir in direction.Direction:
                 adjacent_cell = self.get_adjacent_cell(cell, dir)
 
@@ -358,6 +376,7 @@ class Level(Widget):
         Arguments:
         (x, y) -- grid coordinates as a tuple
         """
+
         cell = level_cell.Cell()
         # Bind here so that cells are created before event can be triggered
         self.bind(size=self.game.play_area.update_play_area_size, pos=self.game.play_area.update_play_area_size)
@@ -383,9 +402,10 @@ class Level(Widget):
         """Add powerups to random cells.
 
         This method chooses cells to add powerups to randomly
-        until the maximum powerup count has been reached.
+        until the game's maximum powerup limit has been reached.
         """
 
+        # Start counting from 0
         powerup_count = 0
         while powerup_count < self.game.powerup_limit:
             coordinates = self.__get_random_coordinates()
@@ -407,8 +427,8 @@ class Level(Widget):
     def __contains_coordinates(self, (x, y)):
         """Check if the level grid contains the given coordinates.
 
-        This method checks if the level grid contains the supplied coordinates
-        and returns True if it does.
+        This method checks if the allocated level grid contains the supplied
+        coordinates and returns True if it does.
 
         Arguments:
         (x, y) -- grid coordinates as a tuple
