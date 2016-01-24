@@ -9,6 +9,7 @@ Game: Pac-man
 ##Contained in this README.md
 * Hotrod the Beetle Design
 * Trello Board Sprints
+* 
 Please see the README.md in the 'Hotrod' folder for documentation relating to the application.
 
 ##Hotrod the Beetle
