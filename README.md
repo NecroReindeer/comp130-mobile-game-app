@@ -1,4 +1,5 @@
 # COMP130 Mobile Game App
+##Hotrod the Beetle
 
 Creativity Cards: Hotrod and Beetle
 
@@ -6,16 +7,23 @@ Game: Pac-man
 
 [Trello Board](https://trello.com/b/HY4IBdXG/kivy-mobile-game)
 
-##Hotrod the Beetle
+##Design
 Hotrod the Beetle will be a game with mechanics like Pac-Man - the player must collect pellet objects in a maze, and the level is complete when all have been collected. The player character is a beetle named Hotrod, and the enemies are rival beetles.  
-The mazes will be procedurally generated. After the player completes a maze, a new one will be generated and the difficulty will be increased through an increase in movement speed and less enemy scatter time. The points you can earn will also increase, however.
-
-The enemies will decide where they are going to move in a way similar to the original Pac-Man ghosts, as described [here](http://gameinternals.com/post/2072558330/understanding-pac-man-ghost-behavior).  
-The player can collect the equivilent of Pac-Man power pellets in order to defeat the enemy beetles, and send them back to their starting area.
+The mazes will be procedurally generated. After the player completes a maze, a new one will be generated and the difficulty will be increased. The player can collect the equivilent of Pac-Man power pellets in order to defeat the enemy beetles, and send them back to their starting area.
 
 The game is survival-based, levels will continue to be generated until you run out of lives. Your score and level can be uploaded after getting a game over, and compared with the scores of others who reached the same level.
 
-## Sprints
+###Design/Mechanics
+####Levels
+The player will be required to collect all pellets in a randomly generated maze in order to advance to the next level. When the player advances to the next level, a new maze will be generated and several parameters will be adjusted to increase the difficulty of the level, such as reducing the number of powerups and increasing the speed. The player is rewarded with an extra life and the points earned from defeating enemies and collecting pellets will also be increased. 
+
+####Enemies
+The enemies will decide where they are going to move in a way similar to the original Pac-Man ghosts, as described [here](http://gameinternals.com/post/2072558330/understanding-pac-man-ghost-behavior). Similarly, the enemies will switch between 'chase' and 'scatter' mode. When the enemies are in chase mode, their target positions will be related to catching the player. When the enemies are in scatter mode, their target positions will be at different corners of the maze. The enemies start out in the Beetle Den, and are released at separate intervals.  
+When the player collects a power-up, the enemies become frightened. The enemies can only become frightened if they are active and outside of the Beetle Den. If the player goes into a frightened enemy, the enemy will return to the Beetle Den, stop being frightened, and come back out again.
+If the player goes into an enemy that is not frightened, the player dies and all characters are returned to their starting positions.
+The game is over if the player runs out of lives.
+
+## Trello Board Sprints
 In the screenshots below, the complete requirements for the corresponding sprint are in the 'Review' column. The tasks for the next sprint are in the 'To do' column.
 
 #### Label Colour Key
