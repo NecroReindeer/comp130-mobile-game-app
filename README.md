@@ -1,5 +1,4 @@
 # COMP130 Mobile Game App
-##Hotrod the Beetle
 
 Creativity Cards: Hotrod and Beetle
 
@@ -7,7 +6,7 @@ Game: Pac-man
 
 [Trello Board](https://trello.com/b/HY4IBdXG/kivy-mobile-game)
 
-##Design
+##Hotrod the Beetle
 Hotrod the Beetle will be a game with mechanics like Pac-Man - the player must collect pellet objects in a maze, and the level is complete when all have been collected. The player character is a beetle named Hotrod, and the enemies are rival beetles.  
 The mazes will be procedurally generated. After the player completes a maze, a new one will be generated and the difficulty will be increased. The player can collect the equivilent of Pac-Man power pellets in order to defeat the enemy beetles, and send them back to their starting area.
 
