@@ -14,6 +14,7 @@ import json
 import random
 import os
 import sys
+import serial
 
 # Kivy modules
 from kivy.app import App
@@ -29,6 +30,7 @@ from kivy.config import Config
 from kivy.core.audio import SoundLoader
 from kivy.core.audio.audio_sdl2 import SoundSDL2
 from kivy.network.urlrequest import UrlRequest
+from kivy.core.window import Window
 
 # Own modules
 import direction
@@ -339,6 +341,13 @@ class HotrodGame(Widget):
     # For managing game state
     game_active = BooleanProperty(False)
 
+    def __init__(self, **kwargs):
+        super(HotrodGame, self).__init__(**kwargs)
+        print "hi"
+        self.keyboard = Window.request_keyboard(self._keyboard_closed, self)
+        self.keyboard.bind(on_key_down=self._on_keyboard_down)
+        self.serial = serial.Serial("COM3", 9600, timeout=0)
+
     def show_start_screen(self):
         """Show the start screen.
 
@@ -353,6 +362,25 @@ class HotrodGame(Widget):
         self.start_screen = user_interface.StartScreen()
         self.__show_screen(self.start_screen)
         self.start_screen.start_button.bind(on_press=self.__show_login_screen)
+
+    def _setup_keyboard(self):
+        self.keyboard = Window.request_keyboard(self._keyboard_closed, self)
+        self.keyboard.bind(on_key_down=self._on_keyboard_down)
+
+    def _keyboard_closed(self):
+        self.keyboard.unbind(on_key_down=self._on_keyboard_down)
+        self.keyboard = None
+
+    def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
+        if keycode[1] == 'up':
+            self.player.next_direction = direction.Direction.up
+        elif keycode[1] == 'right':
+            self.player.next_direction = direction.Direction.right
+        elif keycode[1] == 'down':
+            self.player.next_direction = direction.Direction.down
+        elif keycode[1] == 'left':
+            self.player.next_direction = direction.Direction.left
+            return True
 
     def load_sounds(self):
         """Load the sounds used in the game.
@@ -389,6 +417,7 @@ class HotrodGame(Widget):
         This method initialises the game's properties
         and then restarts the game.
         """
+
 
         self.__initialise_properties()
         self.__start_game()
@@ -477,6 +506,8 @@ class HotrodGame(Widget):
             self.remove_widget(screen)
             self.unbind(size=screen.set_size)
             self.screens.remove(screen)
+
+        self._setup_keyboard()
 
     def __show_login_screen(self, event):
         """Show the login screen.

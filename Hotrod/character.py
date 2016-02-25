@@ -471,6 +471,7 @@ class PlayerBeetle(Character):
         """
 
         self.__check_pellet_collision()
+        self.light_leds()
 
     def on_dead(self, instance, value):
         """Check if the player is dead and remove a life if so.
@@ -482,6 +483,54 @@ class PlayerBeetle(Character):
         if self.dead:
             self.game.lives -= 1
             self.powered_up = False
+
+    def light_leds(self):
+        blocked_directions = self.__get_blocked_directions()
+        string = ""
+
+        for dir in direction.Direction:
+            if dir in blocked_directions:
+                string += '1'
+            else:
+                string += '0'
+
+        string += '9'
+
+        print string
+        self.game.serial.write(string)
+
+    def __get_blocked_directions(self):
+        """Return a list of directions the enemy is allowed to move in.
+
+        This method returns a list of directions the enemy is allowed to
+        move in. The directions are prioritised up-left-down-right.
+        """
+
+        # List in this order means priority is up-left-down-right when using directions.pop
+        directions = [direction.Direction.right,
+                      direction.Direction.down,
+                      direction.Direction.left,
+                      direction.Direction.up]
+        blocked_directions = [dir for dir in directions if not self.__direction_is_allowed(dir)]
+        return blocked_directions
+
+    def __direction_is_allowed(self, direction):
+        """Return true if the enemy is allowed to travel in the given direction.
+
+        This function determines whether the enemy is allowed to travel in a
+        given. The enemy is not allowed to travel through walls or in the opposite
+        direction to its current direction of travel (unless it is in the beetle house).
+
+        Arguments:
+        direction -- direction to be checked as a direction.Direction
+        """
+
+        current_cell = self.game.level.get_cell(self.grid_position)
+        # Cannot move in the direction if there is a wall
+        if current_cell.get_edge(direction).type == level_cell.CellEdgeType.wall:
+            return False
+        else:
+            return True
 
 
 class EnemyBeetle(Character):
