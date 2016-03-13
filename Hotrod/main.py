@@ -6,8 +6,7 @@ game application. Running this file will run the app.
 Classes:
 HotrodApp(App) -- Kivy App widget
 HotrodGame(Widget) -- root game widget
-PlayArea(Widget) -- widget for the gameplay area
-"""
+PlayArea(Widget) -- widget for the gameplay area"""
 
 # Standard Python libraries
 import json
@@ -95,7 +94,7 @@ class PlayArea(Widget):
     """Store methods related to the mechanics and visualisation of the game.
 
     This widget represents the gameplay area. The gameplay objects are children of this widget.
-    This class handles anything relating to the graphical representation of the game and the
+    This class handles anything relating to the graph ical representation of the game and the
     mechanics of the game. This includes level generation, movement updates, and character initialisation.
 
     Public methods:
@@ -346,7 +345,7 @@ class HotrodGame(Widget):
         print "hi"
         self.keyboard = Window.request_keyboard(self._keyboard_closed, self)
         self.keyboard.bind(on_key_down=self._on_keyboard_down)
-        self.serial = serial.Serial("COM3", 9600, timeout=0)
+        self.serial = serial.Serial("COM5", 9600, timeout=0)
 
     def show_start_screen(self):
         """Show the start screen.
@@ -676,7 +675,7 @@ class HotrodApp(App):
     game = ObjectProperty(None)
 
     def build(self):
-        #Config.set('graphics', 'fullscreen', 'auto')
+       # Config.set('graphics', 'fullscreen', 'auto')
         self.game = HotrodGame()
         return self.game
 
@@ -687,4 +686,6 @@ class HotrodApp(App):
 
 
 if __name__ == '__main__':
+    Window.size = (1980, 1080)
+    Window.fullscreen = True
     HotrodApp().run()

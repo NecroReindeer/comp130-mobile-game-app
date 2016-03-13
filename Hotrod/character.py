@@ -490,23 +490,20 @@ class PlayerBeetle(Character):
 
         for dir in direction.Direction:
             if dir in blocked_directions:
+                # Number I used in Arduino code to signify LED on
                 string += '1'
             else:
+                # Number I used in arduino code to signify LED off
                 string += '0'
 
+        # Number I used in Arduino code to terminate string
         string += '9'
 
         print string
         self.game.serial.write(string)
 
     def __get_blocked_directions(self):
-        """Return a list of directions the enemy is allowed to move in.
-
-        This method returns a list of directions the enemy is allowed to
-        move in. The directions are prioritised up-left-down-right.
-        """
-
-        # List in this order means priority is up-left-down-right when using directions.pop
+        # List in this order to match up with Arduino code (which also matches enemy move priority for consistency)
         directions = [direction.Direction.right,
                       direction.Direction.down,
                       direction.Direction.left,
